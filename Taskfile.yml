@@ -1,0 +1,25 @@
+version: "3"
+
+vars:
+  MVNW: '{{if eq OS "windows"}}mvnw.cmd{{else}}./mvnw{{end}}'
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  run:
+    desc: Start the application
+    cmds:
+      - "{{.MVNW}} spring-boot:run"
+
+  test:
+    desc: Run automated tests
+    cmds:
+      - "{{.MVNW}} test"
+
+  verify:
+    desc: Run verification including coverage checks
+    cmds:
+      - "{{.MVNW}} verify"
