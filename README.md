@@ -6,9 +6,7 @@ This repo contains a Spring Boot API for managing flight information used in the
 
 ```text
 lab/
-├── mvnw                                    # Maven wrapper script (macOS/Linux)
-├── mvnw.cmd                                # Maven wrapper script (Windows)
-├── Taskfile.yml                            # Cross-platform task commands
+├── mise.toml                               # Tool versions managed by mise
 ├── pom.xml                                 # Project metadata and dependencies
 ├── README.md                               # This file
 └── src/
@@ -27,30 +25,23 @@ lab/
 
 ### Prerequisites
 
-- Java 25
-- Command runner [task](https://taskfile.dev/)
-- GitHub Copilot in your IDE of choice (for example, the [GitHub Copilot JetBrains plugin](https://plugins.jetbrains.com/plugin/17718-github-copilot--your-ai-pair-programmer))
+- Java 25, Maven 3 and Node 24 installed manually or managed with [mise](https://mise.jdx.dev/)
+- GitHub Copilot in the CLI or your IDE of choice (see ["Setting up GitHub Copilot for yourself"](https://docs.github.com/en/copilot/how-tos/set-up/set-up-for-self))
 
 ### Setup and Run
-
 Start the application:
 
 ```bash
-task run
+mvn spring-boot:run
 ```
 
-The API is available at http://localhost:8080.
+The application will start on port 8080 with Swagger UI available at http://localhost:8080/swagger-ui/index.html.
 
-Swagger UI is available at http://localhost:8080/swagger-ui/index.html.
+### Note on tooling
 
-### Tasks
-[Task](https://taskfile.dev/) is used to run commands irrespective of the underlying OS.
-
-You can see the list of available commands by running:
-
-```bash
-task
-```
+In this course we require Java, Maven and Node to be installed. 
+You can either install them yourself or use [mise](https://mise.jdx.dev/) to manage versions specified in `mise.toml`.
+Check out their [getting started guide](https://mise.jdx.dev/getting-started.html) for more information.
 
 ## Exercises
 The exercises will be available during the training.
