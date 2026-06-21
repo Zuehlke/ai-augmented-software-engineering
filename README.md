@@ -26,7 +26,7 @@ lab/
 ### Prerequisites
 
 - Java 25, Maven 3 and Node 24 installed manually or managed with [mise](https://mise.jdx.dev/)
-- GitHub Copilot in the CLI or your IDE of choice (see ["Setting up GitHub Copilot for yourself"](https://docs.github.com/en/copilot/how-tos/set-up/set-up-for-self))
+- [GitHub Copilot](https://docs.github.com/en/copilot) or [Claude Code](https://code.claude.com/docs/en/overview) setup and ready to use in your IDE (VS Code, IntelliJ) or CLI
 
 ### Setup and Run
 Start the application:
