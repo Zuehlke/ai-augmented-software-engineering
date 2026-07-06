@@ -1,0 +1,188 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OpenAPI definition",
+    "version": "v0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Generated server url"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Actuator",
+      "description": "Monitor and interact",
+      "externalDocs": {
+        "description": "Spring Boot Actuator Web API Documentation",
+        "url": "https://docs.spring.io/spring-boot/docs/current/actuator-api/html/"
+      }
+    }
+  ],
+  "paths": {
+    "/delays": {
+      "get": {
+        "tags": [
+          "delay-controller"
+        ],
+        "operationId": "getDelays",
+        "parameters": [
+          {
+            "name": "airline_code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50,
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DelayDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/actuator": {
+      "get": {
+        "tags": [
+          "Actuator"
+        ],
+        "summary": "Actuator root web endpoint",
+        "operationId": "links",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/vnd.spring-boot.actuator.v3+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "$ref": "#/components/schemas/Link"
+                    }
+                  }
+                }
+              },
+              "application/vnd.spring-boot.actuator.v2+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "$ref": "#/components/schemas/Link"
+                    }
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "$ref": "#/components/schemas/Link"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/actuator/health": {
+      "get": {
+        "tags": [
+          "Actuator"
+        ],
+        "summary": "Actuator web endpoint 'health'",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/vnd.spring-boot.actuator.v3+json": {
+                "schema": {
+                  "type": "object"
+                }
+              },
+              "application/vnd.spring-boot.actuator.v2+json": {
+                "schema": {
+                  "type": "object"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DelayDto": {
+        "type": "object",
+        "properties": {
+          "flightNumber": {
+            "type": "string"
+          },
+          "airline": {
+            "type": "string"
+          },
+          "scheduledTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actualTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "delayMinutes": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "Link": {
+        "type": "object",
+        "properties": {
+          "href": {
+            "type": "string"
+          },
+          "templated": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

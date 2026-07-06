@@ -12,6 +12,8 @@
     <properties>
         <java.version>25</java.version>
         <springdoc.version>3.0.0</springdoc.version>
+        <openapi-diff.version>2.1.7</openapi-diff.version>
+        <springdoc-openapi-maven-plugin.version>1.4</springdoc-openapi-maven-plugin.version>
     </properties>
 
     <parent>
@@ -65,6 +67,54 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-maven-plugin</artifactId>
+                <version>${springdoc-openapi-maven-plugin.version}</version>
+                <configuration>
+                    <outputDir>${project.basedir}/src/main/resources</outputDir>
+                    <outputFileName>openapi.yaml</outputFileName>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>generate-openapi-spec</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.openapitools.openapidiff</groupId>
+                <artifactId>openapi-diff-maven</artifactId>
+                <version>${openapi-diff.version}</version>
+                <configuration>
+                    <oldSpec>${project.basedir}/src/main/resources/openapi-baseline.yaml</oldSpec>
+                    <newSpec>${project.basedir}/src/main/resources/openapi.yaml</newSpec>
+                    <failOnIncompatible>true</failOnIncompatible>
+                    <failOnChanged>false</failOnChanged>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>diff</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.ec4j.maven</groupId>
+                <artifactId>editorconfig-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>check-editorconfig</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

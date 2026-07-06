@@ -96,3 +96,15 @@ Check out their [getting started guide](https://mise.jdx.dev/getting-started.htm
 **Task:**
 - Make yourself familiar with a SDD framework of your choice
 - Implement the same endpoint again using their workflow: `GET /delays/?airline_code=AA&limit=50`
+
+### LAB 7: Teach the agent to detect breaking API changes
+
+**Context:** Using skills we can teach our agent specific capabilities. We will add a skill that helps the agent detect whether API changes are backward-compatible.
+
+In our API spec (`src/main/resources/openapi.yaml`) we already prepared the following change:
+- `GET /delays/?airline_code=AA&limit=50` to
+- `GET /delays/?carrier_code=AA&limit=50`
+
+**Task:**
+- Update `api-breaking-changes/SKILL.md` so that the agents can detect breaking changes. We use [openapi-diff](https://github.com/OpenAPITools/openapi-diff) to spot API changes (you can run `mvn openapi-diff:diff` to get a report).
+- Ask the default agent whether it sees an issue with the foreseen change
