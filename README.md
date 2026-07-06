@@ -85,3 +85,14 @@ Check out their [getting started guide](https://mise.jdx.dev/getting-started.htm
 **Task:**
 - Write the missing front matter for the agents in `research.agent.md`, `plan.agent.md` and `implement.agent.md` respectively.
 - Implement the same endpoint again using the research-plan-implement workflow: `GET /delays/?airline_code=AA&limit=50` → returns 200 OK or 404 Not Found
+
+### LAB 6: Implementing a feature using a SDD framework
+
+**Context:** Instead of using our own research → plan → implement workflow, make yourself familiar with one publicly available SDD framework and implement the same feature using their workflow. Popular frameworks:
+- [GSD](https://github.com/open-gsd/gsd-core)
+- [OPENSPEC](https://openspec.dev/)
+- [Spec Kit](https://github.com/github/spec-kit)
+
+**Task:**
+- Make yourself familiar with a SDD framework of your choice
+- Implement the same endpoint again using their workflow: `GET /delays/?airline_code=AA&limit=50`
