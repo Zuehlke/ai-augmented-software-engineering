@@ -56,3 +56,13 @@ Check out their [getting started guide](https://mise.jdx.dev/getting-started.htm
 **Context:** You will generate project documentation for this repository using the prepared `create-project-documentation` prompt template.
 
 **Task:** Create the documentation in chat using `/create-project-documentation`.
+
+### LAB 3: Shaping the behavior using instruction files
+
+**Context:** In this exercise, you will configure your project so GitHub Copilot produces more consistent and probabilistic outputs. Your goal is to reduce ambiguity and improve output quality by changing how the agent behaves and providing guidance.
+
+**Task:**
+- Describe the role and behavior of Copilot in `copilot-instructions.md`
+- Specify the  glob pattern for the Java-specific instruction in `java.instructions.md`
+- Implement the same endpoint again:
+    - `GET /delays/?airline_code=AA&limit=50` → returns 200 OK or 404 Not Found
