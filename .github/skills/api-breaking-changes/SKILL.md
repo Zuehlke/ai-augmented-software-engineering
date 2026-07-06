@@ -5,11 +5,14 @@ description: Detect breaking changes in this Spring Boot project's REST API by d
 
 ## Mandatory execution policy
 
+- **MUST run** `mvn openapi-diff:diff` — do not guess or infer compatibility from code inspection alone.
 - **DO NOT** provide a compatibility verdict without running the command and reading the report.
 
 ## Running the check
 
-// TODO: Teach the agent to run the actual maven command
+Run `mvn openapi-diff:diff`. All configuration (specs, output, fail conditions) is defined in `pom.xml`.
+
+If the command fails or produces no report, stop and return: "Unable to determine compatibility; openapi-diff did not complete."
 
 ## Output
 
