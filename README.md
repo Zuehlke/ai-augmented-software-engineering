@@ -74,3 +74,14 @@ Check out their [getting started guide](https://mise.jdx.dev/getting-started.htm
 **Task:**
 - Describe the task of our custom agent in `research.agent.md`. The agent should critically review a requirement, surface gaps, refine requirements, and write an improved spec.
 - Ask your agent to create the specification for the endpoint:  `GET /delays/?airline_code=AA&limit=50` → returns 200 OK or 404 Not Found
+
+### LAB 5: Implement a feature using spec-driven development
+
+**Context:** We already created a spec using our research agent.  Now you will apply a full spec-driven workflow that uses the phases
+- research,
+- plan and
+- implement
+
+**Task:**
+- Write the missing front matter for the agents in `research.agent.md`, `plan.agent.md` and `implement.agent.md` respectively.
+- Implement the same endpoint again using the research-plan-implement workflow: `GET /delays/?airline_code=AA&limit=50` → returns 200 OK or 404 Not Found
