@@ -1,6 +1,6 @@
 ---
 description: "Java development instructions"
-# TODO: Add a glob pattern to match your Java source files using applyTo.
+applyTo: "src/**/*.java"
 ---
 
 # Development methodology
