@@ -66,3 +66,11 @@ Check out their [getting started guide](https://mise.jdx.dev/getting-started.htm
 - Specify the  glob pattern for the Java-specific instruction in `java.instructions.md`
 - Implement the same endpoint again:
     - `GET /delays/?airline_code=AA&limit=50` → returns 200 OK or 404 Not Found
+
+### LAB 4: Create your own research agent
+
+**Context:** So far you've used Copilot to generate code directly. Now you will create your customized agent, that specifically supports you in gathering the requirements for the features you want to implement.
+
+**Task:**
+- Describe the task of our custom agent in `research.agent.md`. The agent should critically review a requirement, surface gaps, refine requirements, and write an improved spec.
+- Ask your agent to create the specification for the endpoint:  `GET /delays/?airline_code=AA&limit=50` → returns 200 OK or 404 Not Found
