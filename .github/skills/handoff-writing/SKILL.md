@@ -14,7 +14,7 @@ specs/`<slug>`/
 Where `<slug>` is a short kebab-case identifier for the feature or change.
 
 ## File Naming Convention
-`<phase>`_YYYY-MM-DD.md
+`<phase>`.md
 
 Where `<phase>` = if research then "specification"  | if plan then "design" | if implement then "implementation"
 
