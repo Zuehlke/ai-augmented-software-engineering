@@ -50,3 +50,9 @@ Check out their [getting started guide](https://mise.jdx.dev/getting-started.htm
 
 **Task:** Implement the following endpoint:
 - `GET /delays/?airline_code=AA&limit=50` → returns 200 OK or 404 Not Found
+
+### LAB 2: Prompt Template
+
+**Context:** You will generate project documentation for this repository using the prepared `create-project-documentation` prompt template.
+
+**Task:** Create the documentation in chat using `/create-project-documentation`.
