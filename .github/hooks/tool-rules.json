@@ -1,0 +1,11 @@
+{
+	"hooks": {
+		"preToolUse": [
+			{
+				"matcher": "run_in_terminal",
+				"type": "command",
+				"bash": "./.github/hooks/scripts/no-commit.sh"
+			}
+		]
+	}
+}

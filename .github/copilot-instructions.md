@@ -52,7 +52,3 @@ All guidelines must be followed unless Dev explicitly approves an exception.
 ## Command Execution
 - Prefer maven commands for repository workflows.
 - Use direct tool commands only when no equivalent task target exists, or when diagnosing task-level failures.
-
-## Git Rules
-You must **not execute modifying git commands**.
-You may use **read-only git commands** to inspect the repository state. All commits and repository modifications are performed by Dev.
