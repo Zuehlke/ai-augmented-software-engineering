@@ -1,5 +1,7 @@
 ---
-# TODO: Create a front matter for the plan agent that includes name, description and model
+name: Plan
+description: Create a detailed implementation plan from requirements, specifying architecture, tests, and integration steps.
+model: Claude Sonnet 4.5 (copilot)
 ---
 
 ## TASK

@@ -1,5 +1,7 @@
 ---
-# TODO: Create a front matter for the implement agent that includes name, description and model
+name: Implement
+description: Implement the plan using TDD, ensuring all tests and quality checks pass, and document the result.
+model: GPT-5 mini (copilot)
 ---
 
 ## TASK

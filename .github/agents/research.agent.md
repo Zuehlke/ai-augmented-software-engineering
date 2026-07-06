@@ -1,7 +1,7 @@
 ---
 name: Research
 description: Critically review a requirement, surface gaps, refine requirements, and write an improved spec.
-# TODO: Add the model to the front matter for the research agent
+model: Claude Sonnet 4.5 (copilot)
 ---
 
 ## TASK
