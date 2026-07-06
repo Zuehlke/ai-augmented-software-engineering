@@ -19,7 +19,7 @@ Where `<slug>` is a short kebab-case identifier for the feature or change.
 Where `<phase>` = if research then "specification"  | if plan then "design" | if implement then "implementation"
 
 ## Templates
-Use the templates located in the `templates/` directory:
+Use the templates located in the `.github/skills/handoff-writing/templates/` directory:
 
 - `research-handoff.md`
 - `plan-handoff.md`
