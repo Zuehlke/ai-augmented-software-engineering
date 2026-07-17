@@ -1,7 +1,7 @@
 # AI-Augmented Software Engineering
 
 Course material for AI-augmented software engineering at Zühlke.
-All information about the course and setup is described on the [course homepage]https://ai-augmented-software-engineering.pages.codehub.zuehlke.com/course/).
+All information about the course and setup is described on the [course homepage](https://ai-augmented-software-engineering.pages.codehub.zuehlke.com/course/).
 
 ## Contributing
 
