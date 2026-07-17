@@ -1,0 +1,32 @@
+{
+  "name": "AI-Augmented Software Engineering",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "25",
+      "installMaven": true
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "24"
+    },
+    "ghcr.io/devcontainers-extra/features/go-task:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "vscjava.vscode-java-pack",
+        "vmware.vscode-boot-dev-pack"
+      ]
+    }
+  },
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "Flight API",
+      "onAutoForward": "notify"
+    }
+  },
+  "postCreateCommand": "mvn -q -B -DskipTests package"
+}

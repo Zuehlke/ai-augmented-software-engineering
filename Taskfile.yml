@@ -1,0 +1,45 @@
+version: '3'
+
+tasks:
+  default:
+    desc: "List available tasks"
+    cmds:
+      - task --list
+    silent: true
+
+  versions:
+    desc: "Output the toolchain versions (Java / Maven / Node)"
+    silent: true
+    cmds:
+      - 'echo "Java:  $(java -version 2>&1 | head -1)"'
+      - 'echo "Maven: $(mvn -v 2>/dev/null | head -1)"'
+      - 'echo "Node:  $(node --version)"'
+
+  run:
+    desc: "Run the flight-api on http://localhost:8080"
+    cmds:
+      - mvn spring-boot:run
+
+  test:
+    desc: "Run the test suite"
+    cmds:
+      - mvn test
+
+  lab:
+    desc: "Usage helper for lab setup"
+    cmds:
+      - 'echo "Usage: task lab:<name> (example: task lab:hooks)"'
+
+  "lab:*":
+    desc: "Setup lab by stopping the running app, stashing changes, cleaning, and checking out the selected branch"
+    vars:
+      LAB: "{{index .MATCH 0}}"
+    cmds:
+      - |
+        PID=$(lsof -ti :8080 || true)
+        if [ -n "$PID" ]; then
+          kill "$PID"
+        fi
+        git stash push -u
+        mvn clean
+        git checkout "lab/{{.LAB}}"
