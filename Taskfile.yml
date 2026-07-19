@@ -25,13 +25,8 @@ tasks:
     cmds:
       - mvn test
 
-  lab:
-    desc: "Usage helper for lab setup"
-    cmds:
-      - 'echo "Usage: task lab:<name> (example: task lab:hooks)"'
-
   "lab:*":
-    desc: "Setup lab by stopping the running app, stashing changes, cleaning, and checking out the selected branch"
+    desc: "Switch to lab. Example: task lab:hooks"
     vars:
       LAB: "{{index .MATCH 0}}"
     cmds:
