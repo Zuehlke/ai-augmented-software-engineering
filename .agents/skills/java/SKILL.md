@@ -1,5 +1,6 @@
 ---
-# TODO: Add the required frontmatter
+name: java
+description: Java guidance for Spring Boot work; use when editing Java files, implementing or changing REST endpoints, modifying domain logic or shaping DTO/entity/repository boundaries.
 ---
 
 Use this skill to keep Java API changes layered, test-first, and contract-safe.
