@@ -25,8 +25,8 @@ tasks:
     cmds:
       - mvn test
 
-  "lab:*":
-    desc: "Switch to lab. Example: task lab:hooks"
+  "lab/*":
+    desc: "Switch to lab. Example: task lab/hooks"
     vars:
       LAB: "{{index .MATCH 0}}"
     cmds:
