@@ -1,7 +1,7 @@
 ---
 name: research
 description: Critically review a requirement, surface gaps, refine requirements, and write an improved spec.
-# TODO: Make the skill invocable only by the user, not by other agents.
+disable-model-invocation: true
 ---
 
 ## TASK
