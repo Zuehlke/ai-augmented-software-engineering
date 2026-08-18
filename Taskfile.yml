@@ -33,7 +33,7 @@ tasks:
       - |
         PID=$(lsof -ti :8080 || true)
         if [ -n "$PID" ]; then
-          kill "$PID"
+          echo "$PID" | xargs kill
         fi
         git stash push -u
         mvn clean
