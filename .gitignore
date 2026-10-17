@@ -37,3 +37,10 @@ build/
 
 ### Agent tokens ###
 .devcontainer/.env
+
+### Lab worktrees ###
+.harness/worktrees/
+
+### Evals results ###
+# What flows evals measured, per evals: local to your checkout, not committed
+.harness/evals/results/
