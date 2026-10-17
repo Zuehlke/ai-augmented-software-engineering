@@ -18,7 +18,7 @@ class HealthEndpointTest {
     private MockMvc mockMvc;
 
     @Test
-    void shouldExposeActuatorHealthEndpoint() throws Exception {
+    void health_requested_reportsUp() throws Exception {
         mockMvc.perform(get("/actuator/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"));
