@@ -1,0 +1,7 @@
+{
+  "sandbox": {
+    "enabled": false,
+    "autoAllowBashIfSandboxed": true,
+    "enableWeakerNestedSandbox": true
+  }
+}
