@@ -1,0 +1,7 @@
+[
+  { "prompt": "Add an endpoint that returns all flights of one airline.", "loads": true },
+  { "prompt": "The flight status lookup shows the wrong status when two delay events have the same timestamp. Fix it.", "loads": true },
+  { "prompt": "Fix the typos in README.md.", "loads": false },
+  { "prompt": "Add a task to Taskfile.yml that prints the Java version.", "loads": false },
+  { "prompt": "Explain how DelaysController computes the delay of a flight.", "loads": false }
+]

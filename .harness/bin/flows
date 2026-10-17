@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# flows <command>: runs src/cli/index.ts with tsx, from wherever you are (your directory stays the current one)
+dir="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+exec "$dir/node_modules/.bin/tsx" "$dir/src/cli/index.ts" "$@"

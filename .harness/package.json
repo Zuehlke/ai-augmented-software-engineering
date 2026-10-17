@@ -1,0 +1,29 @@
+{
+  "name": "flows",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The unattended agent workflows of Labs 9-13 (backlog tour, Ralph loop, orchestration pipeline, evals) on Temporal",
+  "bin": {
+    "flows": "bin/flows"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@temporalio/activity": "^1.24.0",
+    "@temporalio/client": "^1.24.0",
+    "@temporalio/common": "^1.24.0",
+    "@temporalio/worker": "^1.24.0",
+    "@temporalio/workflow": "^1.24.0",
+    "tsx": "^4.23.0"
+  },
+  "devDependencies": {
+    "@temporalio/testing": "^1.24.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

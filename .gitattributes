@@ -1,2 +1,4 @@
 /mvnw text eol=lf
 *.cmd text eol=crlf
+# The Ralph loops all add to it, in parallel: a merge keeps the lines of both sides
+.harness/learnings.md merge=union

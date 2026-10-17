@@ -1,0 +1,6 @@
+[
+  { "prompt": "Add an endpoint that returns all flights of one airline.", "loads": true },
+  { "prompt": "Add paging to GET /delays.", "loads": true },
+  { "prompt": "The flight status lookup shows the wrong status when two delay events have the same timestamp. Fix it.", "loads": false },
+  { "prompt": "Fix the typos in README.md.", "loads": false }
+]

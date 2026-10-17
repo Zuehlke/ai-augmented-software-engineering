@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flight Delays Dashboard</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 48rem; margin: 2rem auto; padding: 0 1rem; }
+        section { border: 1px solid #ccc; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+<h1>Flight Delays Dashboard</h1>
+<p>Look up the current delay situation per airline and per flight.</p>
+
+<main id="dashboard">
+    <!-- Each lookup (airline overview, flight status, ...) adds its own <section> here. -->
+    <section id="airline-overview">
+        <h2>Airline overview</h2>
+        <form id="airline-form">
+            <label>Airline code <input id="airline-code" placeholder="LX" required></label>
+            <button type="submit">Search</button>
+        </form>
+        <p id="airline-result"></p>
+    </section>
+
+    <section id="flight-status">
+        <h2>Flight status</h2>
+        <form id="flight-form">
+            <label>Flight number <input id="flight-number" placeholder="LX100" required></label>
+            <button type="submit">Search</button>
+        </form>
+        <p id="flight-result"></p>
+    </section>
+</main>
+
+<script>
+    // Each lookup adds its own JavaScript here.
+    const STATUS_LABELS = { ON_TIME: 'on time', DELAYED: 'delayed', CANCELLED: 'cancelled' };
+
+    async function lookup(url) {
+        const response = await fetch(url);
+        return response.ok ? response.json() : null;
+    }
+
+    document.getElementById('airline-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const code = document.getElementById('airline-code').value.trim();
+        const airline = await lookup(`/airlines/${encodeURIComponent(code)}/overview`);
+        document.getElementById('airline-result').textContent = airline
+            ? `${airline.name}: ${airline.activeOrScheduledFlights} active or scheduled flights`
+            : `Airline ${code} not found.`;
+    });
+
+    document.getElementById('flight-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const flightNumber = document.getElementById('flight-number').value.trim();
+        const flight = await lookup(`/flights/${encodeURIComponent(flightNumber)}/status`);
+        document.getElementById('flight-result').textContent = !flight
+            ? `Flight ${flightNumber} not found.`
+            : flight.status === 'DELAYED'
+                ? `${flight.flightNumber}: delayed by ${flight.delayMinutes} minutes`
+                : `${flight.flightNumber}: ${STATUS_LABELS[flight.status]}`;
+    });
+</script>
+</body>
+</html>

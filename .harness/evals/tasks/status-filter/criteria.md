@@ -1,0 +1,8 @@
+- `GET /delays?status=<status>` returns only the flights whose latest delay event has that status.
+- `on_time`, `delayed` and `cancelled` are accepted in any case, for example `CANCELLED` or `Cancelled`.
+- The filter is applied to the flight's latest event, not to any earlier one.
+- `status` works together with `airline_code`.
+- No flight with that status gives `200` with an empty list. An unknown `airline_code` still gives `404`.
+- Any other `status` gives `400`.
+- Without `status`, `GET /delays` answers exactly as before.
+- Tests cover each status, the case, the combination with `airline_code`, and the bad request.
