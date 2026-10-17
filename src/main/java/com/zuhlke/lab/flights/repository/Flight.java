@@ -8,11 +8,9 @@ import org.springframework.data.relational.core.mapping.Table;
 public record Flight(
         @Id Long id,
         String flightNumber,
-        String airline,
-        LocalDateTime scheduledTime,
-        LocalDateTime actualTime,
-        String status,
-        Integer delayMinutes,
-        LocalDateTime createdAt
+        String airlineCode,
+        String departureAirport,
+        String arrivalAirport,
+        LocalDateTime scheduledTime
 ) {
 }

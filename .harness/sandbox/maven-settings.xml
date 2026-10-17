@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Maven ignores HTTPS_PROXY, so inside the Claude Code sandbox it tries to reach
+  Maven Central directly and fails. The sandbox also exposes its proxy as
+  CLOUDSDK_PROXY_* variables; this file points Maven at that proxy.
+  The proxy only lets through the hosts in no-network.json's allowedDomains.
+  no-network.json loads this file through MAVEN_ARGS, so it only applies there.
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0 https://maven.apache.org/xsd/settings-1.2.0.xsd">
+  <proxies>
+    <proxy>
+      <id>claude-sandbox</id>
+      <active>true</active>
+      <protocol>http</protocol>
+      <host>${env.CLOUDSDK_PROXY_ADDRESS}</host>
+      <port>${env.CLOUDSDK_PROXY_PORT}</port>
+      <username>${env.CLOUDSDK_PROXY_USERNAME}</username>
+      <password>${env.CLOUDSDK_PROXY_PASSWORD}</password>
+      <nonProxyHosts>localhost|127.0.0.1</nonProxyHosts>
+    </proxy>
+  </proxies>
+</settings>
