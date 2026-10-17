@@ -1,0 +1,67 @@
+{
+  "name": "AI-Augmented Software Engineering",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+
+  // --- Sandbox (Claude Code's and Copilot CLI's /sandbox) ----------------------------------------
+  // bubblewrap needs unprivileged user namespaces, and slirp4netns needs to open
+  // /proc/<pid>/ns/net of the sandboxed process. Privileged unmasks /proc; the CLI-only
+  // `--security-opt systempaths=unconfined` is rejected by the Docker API that IntelliJ uses.
+  "privileged": true,
+  "runArgs": [
+    // Docker's default seccomp profile (and AppArmor on Linux hosts) blocks user namespaces
+    "--security-opt", "seccomp=unconfined",
+    "--security-opt", "apparmor=unconfined",
+    // Network namespace and TUN device for slirp4netns
+    "--cap-add=SYS_ADMIN",
+    "--cap-add=NET_ADMIN",
+    "--device=/dev/net/tun"
+  ],
+
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "25",
+      "installMaven": true
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "24"
+    },
+    "ghcr.io/devcontainers-extra/features/go-task:1": {},
+    // The sandbox's dependencies (see above)
+    "ghcr.io/devcontainers-extra/features/apt-packages:1": {
+      "packages": "bubblewrap,socat,slirp4netns,iptables"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "anthropic.claude-code",
+        "vscjava.vscode-java-pack",
+        "vmware.vscode-boot-dev-pack"
+      ]
+    },
+    "jetbrains": {
+      "backend": "IntelliJ IDEA Ultimate",
+      "plugins": [
+        "com.github.copilot"
+      ]
+    }
+  },
+  "forwardPorts": [8080, 8233],
+  "portsAttributes": {
+    "8080": {
+      "label": "Flight API",
+      "onAutoForward": "notify"
+    },
+    // Lab 9+: Temporal, started in the background by `task flows:start`
+    "8233": {
+      "label": "Temporal UI",
+      "onAutoForward": "notify"
+    }
+  },
+  // Runs first, before the slow postCreateCommand, so the token hook is in ~/.bashrc before the first terminal opens.
+  "onCreateCommand": "bash .devcontainer/load-env.sh",
+  // Agent CLIs and Maven cache for all labs, then Temporal and `flows` for Lab 9+. See the script.
+  "postCreateCommand": "bash .devcontainer/post-create.sh"
+}

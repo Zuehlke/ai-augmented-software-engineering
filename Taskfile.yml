@@ -1,0 +1,74 @@
+version: '3'
+
+tasks:
+  default:
+    desc: "List available tasks"
+    cmds:
+      - task --list
+    silent: true
+
+  versions:
+    desc: "Output the toolchain versions (Java / Maven / Node)"
+    silent: true
+    cmds:
+      - 'echo "Java:  $(java -version 2>&1 | head -1)"'
+      - 'echo "Maven: $(mvn -v 2>/dev/null | head -1)"'
+      - 'echo "Node:  $(node --version)"'
+
+  run:
+    desc: "Run the flight-api on http://localhost:8080"
+    cmds:
+      - mvn spring-boot:run
+
+  test:
+    desc: "Run the test suite"
+    cmds:
+      - mvn test
+
+  format:
+    desc: "Fix import order, unused imports and trailing whitespace in the Java sources"
+    cmds:
+      - mvn spotless:apply
+
+  format:check:
+    desc: "Check the Java sources for what task format would fix, without changing them"
+    cmds:
+      - mvn spotless:check
+
+  flows:start:
+    desc: "Start Temporal and the flows worker in the background (Lab 9+)"
+    cmds:
+      - bash .devcontainer/flows-services.sh start
+      - 'echo "Temporal and the worker run. Temporal UI: http://localhost:8233. What they do: task flows:watch, the worker output: flows logs"'
+    silent: true
+
+  flows:watch:
+    desc: "Show what runs and what waits for you, in the terminal (Lab 9+, after task flows:start)"
+    interactive: true
+    cmds:
+      - flows watch
+
+  flows:stop:
+    desc: "Stop the flows worker and Temporal (Lab 9+)"
+    cmds:
+      - bash .devcontainer/flows-services.sh stop
+    silent: true
+
+  "lab/*":
+    desc: "Switch to lab. Example: task lab/hooks"
+    vars:
+      LAB: "{{index .MATCH 0}}"
+    cmds:
+      - |
+        # Lab 9+: stops this lab's workflows and forgets them, so the next lab starts with an empty flows watch.
+        # Unmerged agent/* branches stay. Nothing to do without the harness, or when Temporal doesn't run.
+        if [ -f .harness/package.json ] && temporal operator cluster health 2> /dev/null | grep -q SERVING; then
+          flows cleanup --forget || true
+        fi
+        PID=$(lsof -ti :8080 || true)
+        if [ -n "$PID" ]; then
+          echo "$PID" | xargs kill
+        fi
+        git stash push -u
+        mvn clean
+        git checkout "lab/{{.LAB}}"

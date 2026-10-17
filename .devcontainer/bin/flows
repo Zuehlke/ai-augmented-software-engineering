@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# The `flows` command (Lab 9+), linked to /usr/local/bin/flows by install-temporal.sh. Installs the
+# dependencies of the harness in .harness/ when they're missing or package-lock.json changed, then runs it.
+set -euo pipefail
+workspace="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
+dir="$workspace/.harness"
+# Only node_modules/ may be left after switching to an earlier lab, so it looks for package.json
+[ -f "$dir/package.json" ] || { echo "flows: this branch has no flows harness in .harness/ yet, it comes with Lab 9" >&2; exit 1; }
+
+# A copy of the lockfile marks a complete install, so an interrupted `npm ci` is retried
+stamp="$dir/node_modules/.installed-package-lock.json"
+if ! cmp -s "$dir/package-lock.json" "$stamp"; then
+  echo "flows: installing its dependencies..." >&2
+  npm ci --prefix "$dir" --silent --no-audit --no-fund >&2
+  cp "$dir/package-lock.json" "$stamp"
+fi
+
+[ -z "${FLOWS_INSTALL_ONLY:-}" ] || exit 0
+
+# Temporal and the worker run in the background once you start them: `task flows:start`, see flows-services.sh
+log="$HOME/.flows/worker.log"
+not_started() {
+  echo "flows: Temporal isn't running. Start it and the worker with: task flows:start" >&2
+  exit 1
+}
+case "${1:-}" in
+  # watch shows by itself when Temporal or the worker doesn't run
+  ''|help|-h|--help|watch) ;;
+  logs)
+    [ -f "$log" ] || not_started
+    exec tail -n 200 -F "$log"
+    ;;
+  worker)
+    if [ "${2:-}" != "--foreground" ]; then
+      temporal operator cluster health 2> /dev/null | grep -q SERVING || not_started
+      echo "flows: the worker runs in the background. Its output follows, Ctrl+C only stops showing it." >&2
+      echo "flows: to run it here instead: task flows:stop, then temporal server start-dev and flows worker --foreground" >&2
+      exec tail -n 50 -F "$log"
+    fi
+    ;;
+  *) temporal operator cluster health 2> /dev/null | grep -q SERVING || not_started ;;
+esac
+exec "$dir/bin/flows" "$@"
