@@ -1,7 +1,7 @@
 // Adds up what a workflow's agent runs cost, and which models they ran with (no I/O, so it's deterministic)
 import { ApplicationFailure, ChildWorkflowFailure, isCancellation } from '@temporalio/workflow';
-import type { Role, Usage } from '../shared';
-import type { AgentRun } from '../types/agent';
+import type { Role, Usage } from '../../config';
+import type { AgentRun } from '../../types/agent';
 import { failureMessage } from './failure';
 
 // A cost added to a sum: no sum yet counts as 0. Once one cost is unknown (null, or not reported), the sum is too.

@@ -10,15 +10,15 @@ The skill-loaded eval cases are next to the skills, in `skill-loaded-evals.json`
 - `sandbox/`: the sandbox profile every agent runs in. The agents can't change it either.
 - `evals/`: the evals tasks, and their results in `evals/results/`, not committed.
 - What the agents leave while they run: `progress.md` and `learnings.md`, the Ralph loop's memory, committed
-  on its branch (`progress.md` goes again when the ticket is done), and, not committed, `run/` with the
+  on its branch (`progress.md` goes again when the task is done), and, not committed, `run/` with the
   judge's feedback and `worktrees/`, one per agent at work.
 
 | Lab | Temporal |
 | --- | --- |
 | 9 Durable workflows | `flows plan "<request>"`: `src/workflows/plan.ts` |
-| 10 Ralph loop | `flows ralph <ticket> [--runs 1]`, `flows answer`, or on the board of `flows watch`: `s` starts one run or the loop, `x` throws a loop's work away: `src/workflows/ralph.ts`, `src/workflows/phase.ts` |
-| 11 Parallelizing work | `flows ralph <ticket>` per ticket, each loop in a worktree of its own, `flows cleanup` |
-| 12 Orchestration | `flows start "<request>"`, `flows merge`, `flows cleanup`: `src/workflows/pipeline.ts` |
+| 10 Ralph loop | `flows ralph <task> [--runs 1]`, `flows answer`, or in `flows watch`: Implement a task starts one run or the loop, Throw away in a task's dialog throws its work away: `src/workflows/ralph.ts`, `src/workflows/phase.ts` |
+| 11 Parallelizing work | `flows ralph <task>` per task, each loop in a worktree of its own, `flows cleanup` |
+| 12 Orchestration | `flows start "<request>"`, `flows approve`, `flows revise`, `flows merge`, `flows cleanup`: `src/workflows/pipeline.ts` |
 | 13 Evals | `flows skill-loaded-evals`: `src/workflows/skill-loaded-evals.ts`, the cases in `.agents/skills/<skill>/skill-loaded-evals.json`. `flows evals [task] [--parallel <n>] [--yes]`, `flows evals --stop`: `src/workflows/evals.ts`, see below |
 
 The *Ralph loop* is named after Geoffrey Huntley's technique: the same prompt runs again and again, each
@@ -30,26 +30,27 @@ writes them.
 
 Each role is an agent with a skill in `.agents/skills/<name>/SKILL.md`. In the pipeline, every agent that
 works is checked by a judge with the `judge` skill, which reads only the checks of that phase, in
-`.agents/skills/judge/checks/<phase>.md`; `flows plan` on its own runs the plan agent once, without a judge. Dispatch and merge are plain code, no agents.
+`.agents/skills/judge/checks/<phase>.md`; `flows design` and `flows plan` on their own run their agent once, without a judge. Dispatch and merge are plain code, no agents.
 `src/workflows/prompts.ts` holds what the harness adds to a skill when nobody watches.
 
 | Role | Skill | Model | Where | Command |
 | --- | --- | --- | --- | --- |
 | research | `research` | Opus | `pipeline.ts` | `flows start` |
+| design | `design` | Opus | `design.ts`, `pipeline.ts` | `flows design` |
 | plan | `plan` | Opus | `plan.ts`, `pipeline.ts` | `flows plan` |
-| dispatch | none: the tickets marked `ready`, and the blocked ones whose `blocked_by` tickets are done | none | `pipeline.ts` | |
+| dispatch | none: the tasks marked `ready`, and the blocked ones whose `blocked_by` tasks are done | none | `pipeline.ts` | |
 | implement, the Ralph loop | `implement` | Sonnet | `ralph.ts` | `flows ralph` |
-| judge, of the three above | `judge` | Opus | `phase.ts` | |
+| judge, of the four above | `judge` | Opus | `phase.ts` | |
 | review | `review` | Opus | `pipeline.ts` | `flows merge` |
-| merge | none: rebase and fast-forward | none | `pipeline.ts`, `rebase.ts` | `flows merge` |
+| merge | none: rebase and fast-forward | none | `pipeline.ts`, `lib/git.ts` | `flows merge` |
 | grader, of the evals | `review`, with the hidden criteria | Opus | `evals.ts` | `flows evals` |
 | improve, after the evals | `improve`: proposes changes, changes no file | Opus | `improve.ts` | `flows evals`, `flows skill-loaded-evals` |
 
 The model is a family (`opus`, `sonnet`, `haiku`), which `claude --model` resolves to its latest version.
-`MODELS` in `src/shared.ts` sets it per role: the roles that run once and shape everything after them
-(research, plan, review) get the strongest family, the Ralph loop that runs most often the cheaper one, and
+`MODELS` in `src/config.ts` sets it per role: the roles that run once and shape everything after them
+(research, design, plan, review) get the strongest family, the Ralph loop that runs most often the cheaper one, and
 the judge is at least as strong as the agent it checks.
-With `AGENT=copilot` the families map to Copilot's ids, `claude-opus-5` and `claude-sonnet-5`, see `src/activities/agent.ts`.
+With `AGENT=copilot` the families map to Copilot's ids: `opus` to `gpt-6.1-sol`, since not every Copilot account offers Opus, `sonnet` and `haiku` to `claude-sonnet-5.5`, Copilot's default. `AGENT_MODELS` in `src/config.ts` holds both mappings, and `flows watch` shows the models of the agent you start next.
 
 Implement, judge, review and the grader check a change against the same list, the `change-quality` skill. The
 grader is the review skill once more, on the whole change of an evals run: it also gets the task's hidden
@@ -102,10 +103,10 @@ keeps the pipeline's whole review (`review`), and when the review approved no br
 verdict per branch.
 
 `flows evals --acceptance-feedback` lets a Ralph loop run the task's hidden acceptance tests when it thinks its
-ticket is done, and tells it the names of the failing ones, never what they expect. It's off by default, because
+task is done, and tells it the names of the failing ones, never what they expect. It's off by default, because
 it changes what the evals measure: the agents then get help they won't have on a real feature. Such an evals run is
-marked in `evals.json` (`acceptanceFeedback`), and isn't comparable with the ones without. A ticket that
-is only part of the feature gets feedback about the rest, so it works best when the plan agent makes one ticket.
+marked in `evals.json` (`acceptanceFeedback`), and isn't comparable with the ones without. A task that
+is only part of the feature gets feedback about the rest, so it works best when the plan agent makes one task.
 
 The Evals tab of `flows watch` shows the trend: the three numbers of every evals, and the cases passing of
 every skill-loaded evals, one column each, in the order they ran. A change within noise is dimmed, less than 3 runs
@@ -120,44 +121,48 @@ The results go to `.harness/evals/results/`, not committed.
 
 A *phase* is one role's agent at work: it runs, a judge checks the run, until the judge says PASS
 (`phase.ts`). The Ralph loop is a phase of many steps, one acceptance criterion each. It goes on until the
-ticket is `done`, and stops when 3 runs in a row are rejected, by a plain-code check or by the judge. 30 runs
+task is `done`, and stops when 3 runs in a row are rejected, by a plain-code check or by the judge. 30 runs
 are a backstop, `--runs` lowers it.
 
 The pipeline goes once through dispatch, implement, review and merge. The review is a gate: a branch it rejects
-isn't merged, and the reason is in the result. Dispatch runs once. It picks the tickets marked `ready`, and the blocked ones whose
-`blocked_by` tickets are done already, from an earlier pipeline. A ticket that waits for a ticket of this pipeline, or
+isn't merged, and the reason is in the result. Dispatch runs once. It picks the tasks marked `ready`, and the blocked ones whose
+`blocked_by` tasks are done already, from an earlier pipeline. A task that waits for a task of this pipeline, or
 has a `blocked_reason`, something outside the repo, doesn't start: it's reported as unfinished, and starts in a later
 pipeline, or when you mark it `ready`. Attended, the pipeline asks for
-your approval of the tickets and your merge decision. A *run* is one agent run with a fresh context. A *step* is where a workflow is, as its
+your approval of the tasks and your merge decision. A *run* is one agent run with a fresh context. A *step* is where a workflow is, as its
 `status` says: the pipeline goes `researching`, `planning`, … `done`.
 
 ## Layout
 
-What the labs are about, start here:
+`src/` is laid out as a Temporal project. The folder says what may happen in a file:
 
-- `src/workflows/`: the workflows. No I/O here, every side effect is an activity.
-- `src/workflows/phase.ts`: `runPhase`, an agent does the work and a judge checks it. Ralph is one phase.
-  Plain code checks first, then the judge agent: a run without a commit, or with uncommitted changes,
-  is rejected, and one that changes `.agents/`, `.harness/sandbox`, the harness's code (`HARNESS_CODE` in `src/shared.ts`) or `Taskfile.yml`
-  is thrown away. The agents work in worktrees, the sandbox profile comes from your checkout.
-- `src/workflows/prompts.ts`: what each agent gets: the skill to use, and the rules for running unattended
-- `src/workflows/signals.ts`: how you talk to a running workflow, the queries and signals the CLI sends
-- `src/workflows/text.ts`: reads the verdict at the end of a judge's, the review agent's or the grader's answer
-- `src/workflows/usage.ts`: adds up what the agent runs cost, `src/workflows/failure.ts`: the message of a failure
-- `src/workflows/activities.ts`: timeouts and retry policies of the activities
-- `src/activities/`: agent runs, git, tests, files, and the evals' copies of the repository
-- `src/shared.ts`: what everything shares: the agents, the model per role (`MODELS`), the branch names `agent/<ticket>`
-- `src/types/`: the types of each feature, the agent run, the pipeline, the evals and the skill-loaded evals
-- `src/backlog.ts`: reads the tickets in `backlog/`, `src/rebase.ts`: brings an agent's branch into yours
-- `src/worker.ts`: the worker
-- `src/cli/`: the `flows` command, `index.ts` its usage and commands, one file per command
-- `test/`: workflow tests with fake activities
+```
+src/
+├── config.ts        the task queue, the model per role, the branch names, the limits of the runs
+├── worker.ts        the worker: polls the task queue, runs the workflows and the activities
+├── workflows/       deterministic: the order of the steps, no I/O, no Node modules
+│   ├── pipeline.ts  ralph.ts  plan.ts  design.ts  evals.ts  skill-loaded-evals.ts  improve.ts
+│   ├── phase.ts     runPhase: an agent does the work, a judge checks it. Ralph is one phase.
+│   ├── prompts.ts   what each agent gets: the skill to use, and the rules for running unattended
+│   ├── signals.ts   how you talk to a running workflow: the queries and signals the CLI and the page send
+│   ├── map.ts       the pipeline as flows watch draws it: STAGES and BOXES, with each box's command
+│   └── support/     what the workflows share: the activities' timeouts and retries, costs, verdicts, failures
+├── activities/      I/O, run by the worker: agent runs, git, the backlog, the checks, the evals' copies
+│   └── checks.ts    the plain-code rules before a judge: the tests, the research and the design rules
+├── lib/             plain Node code anyone may use: git (rebase), the backlog, the evals' results, the worker's version
+├── cli/             the `flows` command, the Temporal client: one file per command, index.ts its usage
+├── web/             `flows watch`: server.ts serves it, actions.ts does what you decide, collect.ts,
+│   │                view-model.ts and state.ts turn Temporal and backlog/ into what it shows
+│   └── public/      the page: page.html, page.css, page.js, no build step
+└── types/           the types of the agent run, the pipeline, the evals and the skill-loaded evals
+```
 
-Tooling you don't need to read for the labs:
+What the labs are about, start in `src/workflows/`: `pipeline.ts`, `ralph.ts`, `phase.ts`, `prompts.ts`. In a phase,
+plain code checks first, then the judge agent: a run without a commit, or with uncommitted changes, is rejected,
+and one that changes `.agents/`, `.harness/sandbox`, the harness's code (`HARNESS_CODE` in `src/config.ts`) or
+`Taskfile.yml` is thrown away. The agents work in worktrees, the sandbox profile comes from your checkout.
 
-- `src/watch/`: `flows watch`, a terminal UI that shows what runs and what waits for you. It only looks at
-  Temporal and `backlog/`, and sends the same signals as `flows answer`, `flows start` and `flows merge`.
-  `collect.ts` reads the state, `model.ts` turns it into what shows, `view/` draws it, one file per tab.
+`test/`: the workflows with fake activities, the activities on real git repositories, and `flows watch`.
 
 ## Dev container
 
@@ -175,21 +180,23 @@ Lab 9 walks through it in the lab container. In short:
 
 ```bash
 task flows:start                 # Temporal and the worker, in the background
-task flows:watch                 # terminal 1: flows watch, what runs, and what waits for you
+task flows:watch                 # terminal 1: flows watch on http://localhost:8234, what runs, and what waits for you
 flows plan "<feature request>"   # terminal 2
 ```
 
-`flows watch` shows the pipeline as in the Lab 12 diagram (Tab switches to the backlog as a board, and to the
-Evals tab once the branch has `.harness/evals/`, from Lab 13 on).
-Blue is what runs, purple is what waits for you: a judge's question, the ticket approval, the merge
-decision. It asks the terminal whether it's light or dark; `FLOWS_THEME=light` or `dark` decides instead. Enter answers or decides right there, as `flows answer`, `flows start` and `flows merge` do.
+`flows watch` serves a page on http://localhost:8234 (in GitHub Codespaces, the Ports tab has it): the pipeline as a
+map, as in the Lab 12 diagram, with the stages, the step each box is at, where you decide, where a checkpoint sends
+its handoff back and what each stage leaves; the loops and the worker's output below it, and the Evals tab once the
+branch has `.harness/evals/`, from Lab 13 on. Blue is what runs, purple is what waits for you: a judge's question,
+the specification and the plan approval, the merge decision. You answer or decide right there, as `flows answer`,
+`flows start`, `flows approve`, `flows revise` and `flows merge` do. `flows status` shows the same in the terminal.
 `flows logs` shows the worker's output, the agents' output included (in the dev container, where the worker runs in the background). The Temporal UI is on http://localhost:8233.
 
 Outside the dev container, start Temporal and the worker yourself:
 `temporal server start-dev --db-filename ~/temporal.db` and `flows worker`, each in its own terminal.
 
 `TEMPORAL_ADDRESS` (default `localhost:7233`) and `TEMPORAL_UI` (default `http://localhost:8233`)
-point the CLI and the worker somewhere else. `AGENT=copilot` uses GitHub Copilot CLI, and `a` in `flows watch` switches it for what you start next.
+point the CLI and the worker somewhere else. `AGENT=copilot` uses GitHub Copilot CLI, and the Agent toggle on the page of `flows watch` switches it for what you start next.
 
 ## Develop
 

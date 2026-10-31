@@ -1,6 +1,6 @@
 ---
 name: review
-description: Review a finished change built by other agents like a stranger's pull request, against its tickets in backlog/ or against a feature request and hidden criteria, and end with APPROVE or REJECT.
+description: Review a finished change built by other agents like a stranger's pull request, against its tasks in backlog/ or against a feature request and hidden criteria, and end with APPROVE or REJECT.
 disable-model-invocation: true
 ---
 
@@ -10,10 +10,10 @@ You review a change built by other agents. You don't know how it was built: revi
 pull request. Read any file you need, but don't change any. You get one of two inputs:
 
 - **Branches**, each under `BRANCH <name>`: the pipeline asks whether to merge them. Every branch is
-  checked against its ticket in `backlog/`, the ticket id is in the branch name.
+  checked against its task in `backlog/`, the task id is in the branch name.
 - **One change**, with a FEATURE REQUEST and CRITERIA: the evals ask whether you would ship it. The
   agents that built it never saw the criteria. What they left besides the code, a specification in
-  `specs/` and tickets in `backlog/`, is fine.
+  `specs/` and tasks in `backlog/`, is fine.
 
 ---
 
@@ -21,7 +21,7 @@ pull request. Read any file you need, but don't change any. You get one of two i
 
 For every branch, or for the one change:
 
-1. Check it against what was asked. Every acceptance criterion of the ticket, or every one of the
+1. Check it against what was asked. Every acceptance criterion of the task, or every one of the
    CRITERIA, is met by the change itself, not only by its tests, and nothing outside its scope changed.
    A `.harness/progress.md` on a branch means the loop didn't finish.
 

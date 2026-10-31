@@ -1,8 +1,9 @@
-// The orchestration pipeline's two checkpoints: `flows start` approves the tickets, `flows merge` decides the merge
+// The orchestration pipeline's checkpoints: `flows start` approves the specification and the plan, or sends them back
+// (also `flows approve`, `flows revise`), `flows merge` decides the merge
 import { Client, WorkflowHandle } from '@temporalio/client';
-import type { PipelineStatus } from '../types/pipeline';
-import { approveTicketsSignal, decideMergeSignal, pipelineStatus } from '../workflows/signals';
-import { agent, ask, repoDir, showQuestions, sleep, startOrFollow } from './common';
+import type { Checkpoint, PipelineStatus } from '../types/pipeline';
+import { approveSpecificationSignal, approveTasksSignal, decideMergeSignal, pipelineStatus, reviseSignal } from '../workflows/signals';
+import { agent, ask, askText, repoDir, showQuestions, sleep, startOrFollow } from './common';
 
 export async function start(client: Client, request: string | undefined): Promise<number> {
   if (!request) {
@@ -10,22 +11,100 @@ export async function start(client: Client, request: string | undefined): Promis
     return 1;
   }
   const handle = await startOrFollow(client, 'pipeline', 'pipeline', { repoDir: repoDir(), agent, request });
-  console.log('Waiting for the research and the plan agent. Their output shows up in the worker.');
-  const status = await waitFor(handle, (s) => !['researching', 'planning'].includes(s.step));
-  if (status.step !== 'waiting for your approval') {
-    console.log(`The pipeline is already past planning, it's ${status.step}.`);
+  for (;;) {
+    console.log('Waiting for the agents. Their output shows up in the worker.');
+    const status = await waitFor(handle, (s) => !['researching', 'designing', 'planning'].includes(s.step));
+    if (status.mergeProblem) {
+      console.log(`It couldn't bring what it wrote onto ${status.into}: ${status.mergeProblem}. Then run flows start again.`);
+      return 1;
+    }
+
+    // Checkpoint 1: the specification
+    if (status.step === 'waiting for your specification approval') {
+      console.log('Read the specification in specs/ before you answer.');
+      if (!(await decide(handle, 'specification', 'Approve the specification?'))) return 0;
+      await waitFor(handle, (s) => s.step !== status.step); // until it took your decision
+      continue;
+    }
+    if (status.step !== 'waiting for your plan approval') {
+      console.log(`The pipeline is already past planning, it's ${status.step}.`);
+      return 0;
+    }
+
+    // Checkpoint 2: the plan, the design and its tasks. Only the tasks you approve get an implement loop.
+    console.log('Read the design next to the specification and the new tasks in backlog/ before you answer.');
+    if (!(await ask('Approve the plan?'))) {
+      if (!(await sendBack(handle, 'plan'))) return 0;
+      await waitFor(handle, (s) => s.step !== status.step);
+      continue;
+    }
+    const approved: string[] = [];
+    for (const id of status.tasks) {
+      if (await ask(`Hand ${id} to an unattended agent?`)) approved.push(id);
+    }
+    await handle.signal(approveTasksSignal, approved);
+    console.log(`Approved: ${approved.join(' ') || 'none'}`);
+    console.log('The pipeline goes on by itself: the implement loops, then the review agent. Next, run `flows merge`.');
     return 0;
   }
-  console.log('Read the specification in specs/ and the new tickets in backlog/ before you answer.');
+}
 
-  // Checkpoint 1: only the tickets you approve get an implement loop
-  const approved: string[] = [];
-  for (const id of status.tickets) {
-    if (await ask(`Hand ${id} to an unattended agent?`)) approved.push(id);
+// Asks you at the specification's checkpoint: approve, or send it back with feedback. False when you decide later.
+async function decide(handle: WorkflowHandle, on: Checkpoint, question: string): Promise<boolean> {
+  if (await ask(question)) {
+    await handle.signal(approveSpecificationSignal);
+    console.log('Approved. The design agent goes on.');
+    return true;
   }
-  await handle.signal(approveTicketsSignal, approved);
-  console.log(`Approved: ${approved.join(' ') || 'none'}`);
-  console.log('The pipeline goes on by itself: the implement loops, then the review agent. Next, run `flows merge`.');
+  return sendBack(handle, on);
+}
+
+// Sends a checkpoint back with your feedback. False when you give none: you decide later.
+async function sendBack(handle: WorkflowHandle, on: Checkpoint): Promise<boolean> {
+  const feedback = await askText(`Your feedback, for the ${on === 'specification' ? 'research agent' : 'design and the plan agent'} (empty: decide later):`);
+  if (!feedback) {
+    console.log(`Decide later with flows approve ${on} or flows revise ${on} "<feedback>".`);
+    return false;
+  }
+  await handle.signal(reviseSignal, on, feedback);
+  console.log(`Sent back. ${on === 'specification' ? 'The research agent revises the specification' : 'Its tasks go, the design agent revises the design, and the plan agent cuts the tasks again'}.`);
+  return true;
+}
+
+// `flows approve specification|plan`: approves what waits for you. The plan with all its ready tasks.
+export async function approve(client: Client, on: string | undefined): Promise<number> {
+  if (on !== 'specification' && on !== 'plan') {
+    console.error('Usage: flows approve specification|plan');
+    return 1;
+  }
+  const handle = client.workflow.getHandle('pipeline');
+  const status = await handle.query(pipelineStatus);
+  if (status.step !== `waiting for your ${on} approval`) {
+    console.error(`The pipeline doesn't wait for your ${on} approval, it's ${status.step}.`);
+    return 1;
+  }
+  if (on === 'specification') await handle.signal(approveSpecificationSignal);
+  else await handle.signal(approveTasksSignal, status.tasks);
+  console.log(on === 'specification' ? 'Approved. The design agent goes on.' : `Approved, with ${status.tasks.join(' ') || 'no tasks'}.`);
+  return 0;
+}
+
+// `flows revise specification|plan "<feedback>"`: sends it back to the agents with your feedback
+export async function revise(client: Client, on: string | undefined, feedback: string | undefined): Promise<number> {
+  if ((on !== 'specification' && on !== 'plan') || !feedback?.trim()) {
+    console.error('Usage: flows revise specification|plan "<feedback>"');
+    return 1;
+  }
+  const handle = client.workflow.getHandle('pipeline');
+  const status = await handle.query(pipelineStatus);
+  if (status.step !== `waiting for your ${on} approval`) {
+    console.error(`The pipeline doesn't wait for your ${on} approval, it's ${status.step}.`);
+    return 1;
+  }
+  await handle.signal(reviseSignal, on, feedback.trim());
+  console.log(on === 'specification'
+    ? 'Sent back. The research agent revises the specification with your feedback.'
+    : 'Sent back. Its tasks go, the design agent revises the design with your feedback, and the plan agent cuts the tasks again.');
   return 0;
 }
 

@@ -1,12 +1,13 @@
-// What every part shares: the workflows, the activities, the worker, the CLI and `flows watch`. The types of
-// each feature are next to it in types/: pipeline.ts (the phases, Ralph, plan and the pipeline), evals.ts and
-// skill-loaded-evals.ts, and agent.ts for one agent run.
-// Workflows run in Temporal's deterministic sandbox, so this file and types/ must not import any Node module.
+// What every part shares: the workflows, the activities, the worker, the CLI and `flows watch`: the task queue,
+// the model per role, the branch names, the limits of the runs. The types are in types/.
+// Workflows run in Temporal's deterministic sandbox, so this file, types/ and workflows/ must not import any
+// Node module. What needs Node is in activities/ (run by the worker) or lib/ (anyone may use it).
 //
 // The words used throughout:
-// - role: who does the work. The agents research, plan, implement (the Ralph loop), review, and judge; dispatch
-//   and merge are plain code.
-// - phase: one role's agent doing the work, checked by a judge, in runs until it passes. research, plan, implement.
+// - role: who does the work. The agents research, design, plan, implement (the Ralph loop), review, and judge;
+//   dispatch and merge are plain code.
+// - phase: one role's agent doing the work, checked by a judge, in runs until it passes. research, design, plan,
+//   implement.
 // - step: where a workflow is, in its `status`. The pipeline goes researching → planning → … → done.
 // - run: one agent run, with a fresh context. (Attempts are Temporal's: it retries an activity that failed.)
 
@@ -17,13 +18,13 @@ export const TASK_QUEUE = 'flows';
 // run/, worktrees/). The paths are relative to the repository.
 export const HARNESS_CODE = ['.harness/src/', '.harness/test/', '.harness/bin/', '.harness/package.json', '.harness/package-lock.json', '.harness/tsconfig.json'];
 
-// A ticket's Ralph loop works in .harness/worktrees/<name>, on the branch agent/<name>. For TICKET-5: ticket-5
-export function worktreeName(ticket: string): string {
-  return ticket.toLowerCase();
+// A task's Ralph loop works in .harness/worktrees/<name>, on the branch agent/<name>. For TASK-5: task-5
+export function worktreeName(task: string): string {
+  return task.toLowerCase();
 }
 
-export function branchOf(ticket: string): string {
-  return `agent/${worktreeName(ticket)}`;
+export function branchOf(task: string): string {
+  return `agent/${worktreeName(task)}`;
 }
 
 export type Agent = 'claude' | 'copilot';
@@ -33,8 +34,17 @@ export type Agent = 'claude' | 'copilot';
 // most often gets the cheaper one. The judge is at least as strong as the agent it checks.
 export type Model = 'opus' | 'sonnet' | 'haiku';
 
+// What each agent runs for a family, the one place to change it. claude takes the family as an alias. Copilot takes
+// its own ids and doesn't offer Opus or Haiku to every account: the strongest family gets GPT-6.1 Sol, the others
+// Sonnet 5.5, Copilot's default. flows watch shows these too.
+export const AGENT_MODELS: Record<Agent, Record<Model, string>> = {
+  claude: { opus: 'opus', sonnet: 'sonnet', haiku: 'haiku' },
+  copilot: { opus: 'gpt-6.1-sol', sonnet: 'claude-sonnet-5.5', haiku: 'claude-sonnet-5.5' },
+};
+
 export const MODELS = {
   research: 'opus',
+  design: 'opus',
   plan: 'opus',
   implement: 'sonnet',
   judge: 'opus',
@@ -61,3 +71,13 @@ export interface Usage {
 export function dollars(costUsd: number | null | undefined): string {
   return costUsd === null ? 'unknown' : `$${(costUsd ?? 0).toFixed(2)}`;
 }
+
+// The limits of the agents' runs
+// How many runs of a phase in a row the judge may reject before the phase is stuck and gives up
+export const MAX_FAILURES = 3;
+
+// The most runs a Ralph loop takes, a backstop: `--runs` or one run in `flows watch` lowers it
+export const MAX_RUNS = 30;
+
+// How often each evals task runs: 3 runs, so a task can be reliable or not
+export const EVAL_RUNS = 3;

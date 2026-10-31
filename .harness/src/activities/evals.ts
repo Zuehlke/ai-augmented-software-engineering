@@ -5,12 +5,12 @@ import path from 'node:path';
 import { ApplicationFailure } from '@temporalio/common';
 import type { TestResult } from '../types/pipeline';
 import type { EvalsReport, EvalsRun, EvalsTask, Setup } from '../types/evals';
-import type { SkillLoadedEvalReport, SkillSetup } from '../types/skill-loaded-evals';
-import { RESULTS } from '../results';
-import { staleWorker } from '../version';
-import { HARNESS_CODE } from '../shared';
+import type { SkillLoadedEvalCase, SkillLoadedEvalReport, SkillSetup } from '../types/skill-loaded-evals';
+import { RESULTS } from '../lib/results';
+import { staleWorker } from '../lib/worker-version';
+import { HARNESS_CODE } from '../config';
 import { exec, git } from './exec';
-import { truncate } from './repo';
+import { truncate } from './git';
 
 // Every activity has to be safe to run twice: Temporal retries it when it fails or its worker dies.
 
@@ -20,7 +20,7 @@ const TASKS = '.harness/evals/tasks';
 // harness, the models and the build setup (pom.xml, which the agents' sandbox needs to run the tests), is the
 // setup under test, and comes from your checkout's last commit.
 const APP = ['src'];
-// What a run's copy doesn't get: tickets and specifications of other work, which the pipeline would pick
+// What a run's copy doesn't get: tasks and specifications of other work, which the pipeline would pick
 // up, and the evals tasks themselves, with every task's hidden acceptance tests
 const LEFT_OUT = ['backlog', 'specs', '.harness/evals'];
 
@@ -151,7 +151,20 @@ export async function describeSkillSetup(repoDir: string): Promise<SkillSetup> {
     commit: (await git(repoDir, 'rev-parse', 'HEAD')).trim(),
     skillsCommit: (await git(repoDir, 'log', '-1', '--format=%H', 'HEAD', '--', '.agents/skills')).trim(),
     uncommitted: status.split('\n').filter(Boolean).map((line) => line.slice(3)),
+    descriptions: await skillDescriptions(repoDir),
   };
+}
+
+// The description in the front matter of each skill that has skill-loaded evals, as the checkout has it
+async function skillDescriptions(repoDir: string): Promise<Record<string, string>> {
+  const descriptions: Record<string, string> = {};
+  for (const { skill } of await listSkillLoadedEvalCases(repoDir)) {
+    const file = path.join(repoDir, '.agents/skills', skill, 'SKILL.md');
+    if (descriptions[skill] !== undefined || !existsSync(file)) continue;
+    const match = /^description:\s*(.*)$/m.exec((await readFile(file, 'utf8')).split(/^---\s*$/m)[1] ?? '');
+    if (match) descriptions[skill] = match[1].trim().replace(/^(['"])(.*)\1$/, '$2');
+  }
+  return descriptions;
 }
 
 // A whole run of the skill-loaded evals: .harness/evals/results/<evalsId>/skill-loaded-evals.json
@@ -159,4 +172,17 @@ export async function writeSkillReport(repoDir: string, report: SkillLoadedEvalR
   const dir = path.join(repoDir, RESULTS, report.evalsId);
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, 'skill-loaded-evals.json'), JSON.stringify(report, null, 2) + '\n');
+}
+
+// The cases of every skill that has a skill-loaded-evals.json, each with the name of its skill
+export async function listSkillLoadedEvalCases(repoDir: string): Promise<SkillLoadedEvalCase[]> {
+  const skillsDir = path.join(repoDir, '.agents/skills');
+  const cases: SkillLoadedEvalCase[] = [];
+  for (const skill of (await readdir(skillsDir)).sort()) {
+    const file = path.join(skillsDir, skill, 'skill-loaded-evals.json');
+    if (!existsSync(file)) continue;
+    const skillCases: { prompt: string; loads: boolean }[] = JSON.parse(await readFile(file, 'utf8'));
+    cases.push(...skillCases.map(({ prompt, loads }) => ({ skill, prompt, loads })));
+  }
+  return cases;
 }

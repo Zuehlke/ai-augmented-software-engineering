@@ -1,5 +1,5 @@
 // One agent run: what the workflows ask for, and what the runAgent activity gives back
-import type { Agent, Model } from '../shared';
+import type { Agent, Model } from '../config';
 
 // write: the agent can change files and commit. read: the agent can only read files.
 export type Mode = 'write' | 'read';

@@ -11,17 +11,17 @@ the only thing the next phase gets, so write them for a reader who has no other 
 ## File Location
 
 The specification and the design go to `specs/<slug>/`, where `<slug>` is a short kebab-case
-identifier for the feature or change. The tickets go to `backlog/`. The progress of what is being
-implemented, a ticket or a specification, goes to `.harness/progress.md`, and is deleted when it is done.
+identifier for the feature or change. The tasks go to `backlog/`. The progress of what is being
+implemented, a task or a specification, goes to `.harness/progress.md`, and is deleted when it is done.
 
 | Phase     | File                               | Template                                |
 | --------- | ---------------------------------- | --------------------------------------- |
 | research  | `specs/<slug>/specification.md`    | `templates/specification.md`            |
 | design    | `specs/<slug>/design.md`           | `templates/design.md`                   |
-| plan      | `backlog/TICKET-<n>-<slug>.md`     | the ticket template in the `plan` skill |
+| plan      | `backlog/TASK-<n>-<slug>.md`     | the task template in the `plan` skill |
 | implement | `.harness/progress.md`             | `templates/progress.md`                 |
 
-The design is optional: the unattended pipeline goes from the specification straight to the plan.
+The pipeline writes the design after the specification, and the plan cuts the tasks along it.
 
 The templates are in the `templates/` folder next to this file. Copy the template when you create a
 handoff, and update the existing file instead of writing a new one.

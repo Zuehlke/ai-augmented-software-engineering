@@ -1,9 +1,9 @@
 // The evals' results in .harness/evals/results/, for `flows evals` and `flows watch`
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { dollars } from './shared';
-import type { EvalsReport } from './types/evals';
-import type { SkillLoadedEvalReport } from './types/skill-loaded-evals';
+import { dollars } from '../config';
+import type { EvalsReport } from '../types/evals';
+import type { SkillLoadedEvalReport } from '../types/skill-loaded-evals';
 
 export const RESULTS = '.harness/evals/results';
 
@@ -38,14 +38,6 @@ export function estimate(history: EvalsReport[], runs: number): number | null | 
   const last = history.at(-1);
   if (!last || !last.runs.length) return undefined;
   return last.costUsd === null ? null : (last.costUsd / last.runs.length) * runs;
-}
-
-// What `runs` runs of the skill-loaded evals will cost, by the average run of the last one, like `estimate`
-export function estimateSkills(history: SkillLoadedEvalReport[], runs: number): number | null | undefined {
-  const last = history.at(-1);
-  const count = last?.results.reduce((sum, result) => sum + result.runs.length, 0);
-  if (!last || !count) return undefined;
-  return last.costUsd === null ? null : (last.costUsd / count) * runs;
 }
 
 // An estimate as the start of an evals shows it: about $4.20, by the last evals. `kind`: evals or skill-loaded evals.
