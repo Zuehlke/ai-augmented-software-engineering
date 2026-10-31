@@ -48,20 +48,25 @@
       ]
     }
   },
-  "forwardPorts": [8080, 8233],
+  "forwardPorts": [8080, 8233, 8234],
   "portsAttributes": {
     "8080": {
       "label": "Flight API",
       "onAutoForward": "notify"
     },
-    // Lab 9+: Temporal, started in the background by `task flows:start`
+    // Lab 8+: Temporal, started in the background by `task flows:start`
     "8233": {
       "label": "Temporal UI",
       "onAutoForward": "notify"
+    },
+    // Lab 8+: what runs and what waits for you, `task flows:watch`
+    "8234": {
+      "label": "flows watch",
+      "onAutoForward": "openBrowser"
     }
   },
   // Runs first, before the slow postCreateCommand, so the token hook is in ~/.bashrc before the first terminal opens.
   "onCreateCommand": "bash .devcontainer/load-env.sh",
-  // Agent CLIs and Maven cache for all labs, then Temporal and `flows` for Lab 9+. See the script.
+  // Agent CLIs and Maven cache for all labs, then Temporal and `flows` for Lab 8+. See the script.
   "postCreateCommand": "bash .devcontainer/post-create.sh"
 }

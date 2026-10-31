@@ -36,20 +36,19 @@ tasks:
       - mvn spotless:check
 
   flows:start:
-    desc: "Start Temporal and the flows worker in the background (Lab 9+)"
+    desc: "Start Temporal and the flows worker in the background (Lab 8+)"
     cmds:
       - bash .devcontainer/flows-services.sh start
       - 'echo "Temporal and the worker run. Temporal UI: http://localhost:8233. What they do: task flows:watch, the worker output: flows logs"'
     silent: true
 
   flows:watch:
-    desc: "Show what runs and what waits for you, in the terminal (Lab 9+, after task flows:start)"
-    interactive: true
+    desc: "Show what runs and what waits for you, in your browser on http://localhost:8234 (Lab 8+, after task flows:start)"
     cmds:
       - flows watch
 
   flows:stop:
-    desc: "Stop the flows worker and Temporal (Lab 9+)"
+    desc: "Stop the flows worker and Temporal (Lab 8+)"
     cmds:
       - bash .devcontainer/flows-services.sh stop
     silent: true
@@ -60,7 +59,7 @@ tasks:
       LAB: "{{index .MATCH 0}}"
     cmds:
       - |
-        # Lab 9+: stops this lab's workflows and forgets them, so the next lab starts with an empty flows watch.
+        # Lab 8+: stops this lab's workflows and forgets them, so the next lab starts with an empty flows watch.
         # Unmerged agent/* branches stay. Nothing to do without the harness, or when Temporal doesn't run.
         if [ -f .harness/package.json ] && temporal operator cluster health 2> /dev/null | grep -q SERVING; then
           flows cleanup --forget || true
