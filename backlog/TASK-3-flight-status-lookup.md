@@ -1,7 +1,7 @@
 ---
-id: TICKET-3
+id: TASK-3
 status: blocked
-blocked_by: TICKET-1, TICKET-2
+blocked_by: TASK-1, TASK-2
 ---
 
 # Flight status lookup

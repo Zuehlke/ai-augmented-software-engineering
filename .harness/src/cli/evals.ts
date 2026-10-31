@@ -2,11 +2,11 @@
 import { execFileSync } from 'node:child_process';
 import { Client, WorkflowHandle } from '@temporalio/client';
 import { listEvalsTasks } from '../activities/evals';
-import { estimate, estimateText, formatReport, formatSkillReport, newEvalsId, readHistory } from '../results';
-import { HARNESS_CODE, TASK_QUEUE } from '../shared';
+import { estimate, estimateText, formatReport, formatSkillReport, newEvalsId, readHistory } from '../lib/results';
+import { EVAL_RUNS, HARNESS_CODE, TASK_QUEUE } from '../config';
 import type { EvalsReport } from '../types/evals';
 import type { SkillLoadedEvalReport } from '../types/skill-loaded-evals';
-import { staleWorker } from '../version';
+import { staleWorker } from '../lib/worker-version';
 import { agent, ask, link, noMoreQuestions, repoDir, startOrFollow, workflowFailure } from './common';
 
 // The flags of `flows evals`, see the usage in index.ts
@@ -34,7 +34,7 @@ export async function evals(client: Client, task: string | undefined, { parallel
     console.error('There are no evals tasks in .harness/evals/tasks/.');
     return 1;
   }
-  const runs = 3;
+  const runs = EVAL_RUNS;
 
   // What it will cost, by the last evals, before it spends it
   const expected = estimate(readHistory(root), tasks.length * runs);

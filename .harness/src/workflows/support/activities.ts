@@ -1,5 +1,5 @@
 import { proxyActivities } from '@temporalio/workflow';
-import type * as activities from '../activities';
+import type * as activities from '../../activities';
 
 // How Temporal runs the activities: how long they may take, and how often it retries them.
 
@@ -13,9 +13,12 @@ export const { runAgent, loadsSkill } = proxyActivities<typeof activities>({
 
 // Everything else: files, git and the tests
 export const {
-  listTickets,
-  readyTickets,
-  blockedTickets,
+  listTasks,
+  removeTasks,
+  designProblem,
+  specificationOf,
+  readyTasks,
+  blockedTasks,
   progressLeft,
   setFeedback,
   runTests,
@@ -24,7 +27,7 @@ export const {
   headCommit,
   currentBranch,
   checkoutProblem,
-  ticketDone,
+  taskDone,
   addWorktree,
   removeWorktree,
   requireCommitted,

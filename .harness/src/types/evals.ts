@@ -1,5 +1,5 @@
 // The evals: every task runs through the unattended pipeline, and is graded
-import type { Agent, Role, Usage } from '../shared';
+import type { Agent, Role, Usage } from '../config';
 import type { PipelineStep } from './pipeline';
 
 // The evals grades the setup as it is, the skills, the harness and the models, on a few fixed tasks. Each
@@ -18,7 +18,7 @@ export interface EvalsInput {
   tasks: EvalsTask[];
   runs?: number; // per task, 3 by default
   parallel?: number; // how many runs work at the same time, 3 by default
-  // The loops learn which hidden acceptance tests fail when they think a ticket is done, by name only.
+  // The loops learn which hidden acceptance tests fail when they think a task is done, by name only.
   // Off by default: the evals then grades what the agents do without that help.
   acceptanceFeedback?: boolean;
 }

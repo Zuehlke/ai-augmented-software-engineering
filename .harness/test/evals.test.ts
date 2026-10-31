@@ -5,7 +5,7 @@ import { DefaultLogger, Runtime, Worker } from '@temporalio/worker';
 import type * as activities from '../src/activities';
 import { WorkflowFailedError } from '@temporalio/client';
 import { Context } from '@temporalio/activity';
-import { estimate, formatReport } from '../src/results';
+import { estimate, formatReport } from '../src/lib/results';
 import type { AgentInput } from '../src/types/agent';
 import type { EvalsReport, EvalsRun, EvalsTask } from '../src/types/evals';
 import { summarize } from '../src/workflows/evals';
@@ -31,7 +31,7 @@ interface Seen {
   copies: string[]; // the copies there are right now
   most: number; // the most copies there were at the same time
   requests: string[]; // the feature requests the research agents got
-  built: Set<string>; // the worktrees whose ticket an agent worked on: they're done after it
+  built: Set<string>; // the worktrees whose task an agent worked on: they're done after it
 }
 
 // Every agent run costs 1 cent and passes. `fakes` changes that.
@@ -62,22 +62,25 @@ function createWorker(seen: Seen, fakes: Partial<typeof activities> = {}): Promi
       currentBranch: async () => 'evals',
       checkoutProblem: async () => null,
       addWorktree: async (repo: string, name: string) => `${repo}/worktrees/${name}`,
-      readyTickets: async () => ['TICKET-1'],
-      blockedTickets: async () => [],
+      readyTasks: async () => ['TASK-1'],
+      listTasks: async () => [],
+      designProblem: async () => null,
+      specificationOf: async () => ({ spec: 'specs/delays/specification.md' }),
+      blockedTasks: async () => [],
       removeWorktree: async () => {},
       branchDiffs: async () => 'diffs',
       setFeedback: async () => {},
       changesSince: async () => ({ files: ['src/Flights.java'], uncommitted: [], commits: 'commit' }),
       resetTo: async () => {},
       runTests: async () => ({ pass: true, tail: '' }),
-      ticketDone: async (dir: string) => built.has(dir),
+      taskDone: async (dir: string) => built.has(dir),
       progressLeft: async () => false,
       failingHiddenTests: async () => [],
       mergeBranch: async () => null,
       runAgent: async ({ workDir, mode, model, prompt }: AgentInput) => {
         if (prompt.startsWith('Use the research skill')) seen.requests.push(/Feature request: (.*)/.exec(prompt)![1]);
-        if (mode === 'write' && workDir?.includes('/worktrees/ticket-')) built.add(workDir);
-        const output = prompt.includes('on the branches below') ? 'agent/ticket-1: APPROVE' : prompt.includes('on the change below') ? 'Clean change.\nAPPROVE' : 'PASS';
+        if (mode === 'write' && workDir?.includes('/worktrees/task-')) built.add(workDir);
+        const output = prompt.includes('on the branches below') ? 'agent/task-1: APPROVE' : prompt.includes('on the change below') ? 'Clean change.\nAPPROVE' : 'PASS';
         return { output, costUsd: 0.01, model: `claude-${model}-5-5` };
       },
       ...fakes,
@@ -104,9 +107,9 @@ test('every task runs 3 times through the unattended pipeline, each run is grade
     runAgent: async ({ workDir, mode, model, prompt }: AgentInput) => {
       const run = (output: string) => ({ output, costUsd: 0.01, model: `claude-${model}-5-5` });
       if (prompt.startsWith('Use the research skill')) seen.requests.push(/Feature request: (.*)/.exec(prompt)![1]);
-      if (mode === 'write' && workDir?.includes('/worktrees/ticket-')) seen.built.add(workDir);
+      if (mode === 'write' && workDir?.includes('/worktrees/task-')) seen.built.add(workDir);
       if (prompt.includes('to judge this implement run') && workDir?.startsWith('/copies/t1-2/')) return run('FAILED: the data isn’t there');
-      if (prompt.includes('on the branches below')) return run('agent/ticket-1: APPROVE');
+      if (prompt.includes('on the branches below')) return run('agent/task-1: APPROVE');
       if (prompt.includes('on the change below')) return run('APPROVE');
       return run('PASS');
     },
@@ -133,9 +136,9 @@ test('a run that fails counts as not accepted, and what its agents cost still co
     // In run 1 the research judge fails the pipeline itself, after one agent run and its judge
     runAgent: async ({ workDir, mode, model, prompt }: AgentInput) => {
       const run = (output: string) => ({ output, costUsd: 0.01, model: `claude-${model}-5-5` });
-      if (mode === 'write' && workDir?.includes('/worktrees/ticket-')) seen.built.add(workDir);
+      if (mode === 'write' && workDir?.includes('/worktrees/task-')) seen.built.add(workDir);
       if (prompt.includes('to judge this research run') && workDir?.startsWith('/copies/t1-1/')) return run('FAILED: the request is unclear');
-      if (prompt.includes('on the branches below')) return run('agent/ticket-1: APPROVE');
+      if (prompt.includes('on the branches below')) return run('agent/task-1: APPROVE');
       if (prompt.includes('on the change below')) return run('APPROVE');
       return run('PASS');
     },
@@ -147,9 +150,9 @@ test('a run that fails counts as not accepted, and what its agents cost still co
   assert.match(failed.reason, /the request is unclear/);
   assert.equal(failed.costUsd?.toFixed(2), '0.02');
   assert.ok(report.runs.slice(1).every((r) => r.accepted), JSON.stringify(report.runs.map((r) => r.reason)));
-  // research, plan, the loop: a step and a judge each, the review and the grader: 8 runs, in 2 runs of the task
-  assert.equal(report.costUsd?.toFixed(2), '0.18');
-  assert.equal(report.costPerAccepted?.toFixed(2), '0.09');
+  // research, design, plan, the loop: a step and a judge each, the review and the grader: 10 runs, in 2 runs of the task
+  assert.equal(report.costUsd?.toFixed(2), '0.22');
+  assert.equal(report.costPerAccepted?.toFixed(2), '0.11');
 });
 
 test('a run in which a judge rejected a step is accepted, but not first time right, and the cost is split by role', async () => {
@@ -158,9 +161,9 @@ test('a run in which a judge rejected a step is accepted, but not first time rig
   const worker = await createWorker(seen, {
     runAgent: async ({ workDir, mode, model, prompt }: AgentInput) => {
       const run = (output: string) => ({ output, costUsd: 0.01, model: `claude-${model}-5-5` });
-      if (mode === 'write' && workDir?.includes('/worktrees/ticket-')) seen.built.add(workDir);
+      if (mode === 'write' && workDir?.includes('/worktrees/task-')) seen.built.add(workDir);
       if (prompt.includes('to judge this implement run') && workDir?.startsWith('/copies/t1-1/') && !rejectedOnce) return (rejectedOnce = true), run('RETRYABLE: no test for a blank status');
-      if (prompt.includes('on the branches below')) return run('agent/ticket-1: APPROVE');
+      if (prompt.includes('on the branches below')) return run('agent/task-1: APPROVE');
       if (prompt.includes('on the change below')) return run('APPROVE');
       return run('PASS');
     },
@@ -170,8 +173,8 @@ test('a run in which a judge rejected a step is accepted, but not first time rig
   assert.deepEqual(report.runs.map((r) => r.rejections ?? 0), [1, 0, 0]);
   assert.deepEqual(report.firstTimeRight, { runs: 2, of: 3 });
   assert.equal(report.runs[1].costByRole?.research, 0.01);
-  assert.equal(report.runs[1].costByRole?.judge?.toFixed(2), '0.03'); // research, plan, the loop's step
-  assert.equal(report.runs[0].costByRole?.judge?.toFixed(2), '0.04'); // and the rejected step's second run
+  assert.equal(report.runs[1].costByRole?.judge?.toFixed(2), '0.04'); // research, design, plan, the loop's step
+  assert.equal(report.runs[0].costByRole?.judge?.toFixed(2), '0.05'); // and the rejected step's second run
   assert.equal(report.runs[1].costByRole?.grader, 0.01);
   assert.equal(report.costByRole?.review?.toFixed(2), '0.03');
 });
@@ -195,12 +198,12 @@ test('at most `parallel` runs work at the same time, and the runs of all tasks d
   const report = await runEvals(worker, [task('t1'), task('t2')], 2);
   assert.equal(seen.most, 2);
   assert.equal(report.runs.length, 6);
-  assert.ok(report.runs.every((r) => r.accepted)); // 6 pipelines, each with its own Ralph loop for TICKET-1
+  assert.ok(report.runs.every((r) => r.accepted)); // 6 pipelines, each with its own Ralph loop for TASK-1
   assert.deepEqual(report.reliability, { tasks: 2, of: 2 });
 });
 
 const run = (task: string, n: number, accepted: boolean, costUsd: number | null | undefined): EvalsRun => ({
-  task, run: n, accepted, reason: accepted ? 'the tests pass' : 'nothing was merged: TICKET-1: out of runs', costUsd, durationS: 60, step: 'done', merged: [], skillsCommit: 's', harnessCommit: 'h',
+  task, run: n, accepted, reason: accepted ? 'the tests pass' : 'nothing was merged: TASK-1: out of runs', costUsd, durationS: 60, step: 'done', merged: [], skillsCommit: 's', harnessCommit: 'h',
 });
 
 test('the numbers: no accepted run has no cost per accepted change, a run without a cost makes it unknown', () => {
@@ -224,7 +227,7 @@ test('flows evals prints every task’s runs, why runs weren’t accepted, and t
     'csv               ✓ ✓ ✓',
     '',
     'Not accepted:',
-    '  min-delay-filter run 3: nothing was merged: TICKET-1: out of runs',
+    '  min-delay-filter run 3: nothing was merged: TASK-1: out of runs',
     '',
     'Quality      5 / 6 runs accepted',
     'Reliability  1 / 2 tasks with every run accepted',
@@ -241,8 +244,8 @@ test('the grader gets the request, the hidden criteria and the run’s change, a
   const worker = await createWorker(seen, {
     runAgent: async ({ repoDir, workDir, mode, model, prompt }: AgentInput) => {
       const run = (output: string) => ({ output, costUsd: 0.01, model: `claude-${model}-5-5` });
-      if (mode === 'write' && workDir?.includes('/worktrees/ticket-')) seen.built.add(workDir);
-      if (prompt.includes('on the branches below')) return run('agent/ticket-1: APPROVE');
+      if (mode === 'write' && workDir?.includes('/worktrees/task-')) seen.built.add(workDir);
+      if (prompt.includes('on the branches below')) return run('agent/task-1: APPROVE');
       if (!prompt.includes('on the change below')) return run('PASS');
       prompts.push(prompt);
       assert.equal(mode, 'read');
@@ -260,7 +263,7 @@ test('the grader gets the request, the hidden criteria and the run’s change, a
   assert.equal(report.runs[1].grading, 'The filter uses the first event, not the latest.\nREJECT: filters on an old delay event');
   assert.equal(report.runs[2].reason, 'the grader rejects it: it gave no verdict');
   assert.equal(report.runs[0].models?.grader, 'claude-opus-5-5');
-  assert.equal(report.runs[0].costUsd?.toFixed(2), '0.08'); // 7 runs of the pipeline, and the grader
+  assert.equal(report.runs[0].costUsd?.toFixed(2), '0.10'); // 9 runs of the pipeline, and the grader
 });
 
 test('the grader only grades what passes the hidden tests', async () => {
@@ -289,8 +292,8 @@ test('a stopped evals stops its runs, keeps the ones that finished, and removes 
           setTimeout(resolve, 5_000);
         });
       }
-      if (mode === 'write' && workDir?.includes('/worktrees/ticket-')) seen.built.add(workDir);
-      const output = prompt.includes('on the branches below') ? 'agent/ticket-1: APPROVE' : prompt.includes('on the change below') ? 'APPROVE' : 'PASS';
+      if (mode === 'write' && workDir?.includes('/worktrees/task-')) seen.built.add(workDir);
+      const output = prompt.includes('on the branches below') ? 'agent/task-1: APPROVE' : prompt.includes('on the change below') ? 'APPROVE' : 'PASS';
       return { output, costUsd: 0.01, model: `claude-${model}-5-5` };
     },
   });
@@ -318,18 +321,18 @@ test('the estimate is the last evals’s average run, times the runs to come', (
 
 test('a run nothing of which was merged keeps the review whole, and says what the review said per branch', async () => {
   const seen = newSeen();
-  const review = 'Looks incomplete.\n\n**agent/ticket-1: REJECT, no test covers status with airline_code**';
+  const review = 'Looks incomplete.\n\n**agent/task-1: REJECT, no test covers status with airline_code**';
   const worker = await createWorker(seen, {
     runAgent: async ({ workDir, mode, model, prompt }: AgentInput) => {
       const run = (output: string) => ({ output, costUsd: 0.01, model: `claude-${model}-5-5` });
-      if (mode === 'write' && workDir?.includes('/worktrees/ticket-')) seen.built.add(workDir);
+      if (mode === 'write' && workDir?.includes('/worktrees/task-')) seen.built.add(workDir);
       if (prompt.includes('on the branches below')) return run(review);
       return run('PASS');
     },
   });
   const report = await runEvals(worker, [task('t1')]);
   assert.equal(report.runs[0].accepted, false);
-  assert.equal(report.runs[0].reason, 'nothing was merged: the review approved no branch: agent/ticket-1: REJECT, no test covers status with airline_code');
+  assert.equal(report.runs[0].reason, 'nothing was merged: the review approved no branch: agent/task-1: REJECT, no test covers status with airline_code');
   assert.equal(report.runs[0].review, review);
 });
 
@@ -338,7 +341,7 @@ test('a review without a verdict line per branch is said to be one', async () =>
   const worker = await createWorker(seen, {
     runAgent: async ({ workDir, mode, model, prompt }: AgentInput) => {
       const run = (output: string) => ({ output, costUsd: 0.01, model: `claude-${model}-5-5` });
-      if (mode === 'write' && workDir?.includes('/worktrees/ticket-')) seen.built.add(workDir);
+      if (mode === 'write' && workDir?.includes('/worktrees/task-')) seen.built.add(workDir);
       return run(prompt.includes('on the branches below') ? 'I approve the change.' : 'PASS');
     },
   });
@@ -346,7 +349,7 @@ test('a review without a verdict line per branch is said to be one', async () =>
   assert.match(report.runs[0].reason, /the review gave no verdict line per branch/);
 });
 
-test('with acceptance feedback, a loop learns the names of the failing hidden tests once its ticket is done, and only then', async () => {
+test('with acceptance feedback, a loop learns the names of the failing hidden tests once its task is done, and only then', async () => {
   const seen = newSeen();
   const asked: string[] = [];
   const feedback: string[] = [];
@@ -358,8 +361,8 @@ test('with acceptance feedback, a loop learns the names of the failing hidden te
     setFeedback: async (_dir: string, text: string | null) => void (text && feedback.push(text)),
     runAgent: async ({ workDir, mode, model, prompt }: AgentInput) => {
       const run = (output: string) => ({ output, costUsd: 0.01, model: `claude-${model}-5-5` });
-      if (mode === 'write' && workDir?.includes('/worktrees/ticket-')) seen.built.add(workDir);
-      return run(prompt.includes('on the branches below') ? 'agent/ticket-1: APPROVE' : prompt.includes('on the change below') ? 'APPROVE' : 'PASS');
+      if (mode === 'write' && workDir?.includes('/worktrees/task-')) seen.built.add(workDir);
+      return run(prompt.includes('on the branches below') ? 'agent/task-1: APPROVE' : prompt.includes('on the change below') ? 'APPROVE' : 'PASS');
     },
   });
   const report = await worker.runUntil(
@@ -384,9 +387,9 @@ test('when runs weren’t right the first time, the improve agent proposes chang
     runAgent: async (input: AgentInput) => {
       const { workDir, mode, model, prompt } = input;
       const run = (output: string) => ({ output, costUsd: 0.01, model: `claude-${model}-5-5` });
-      if (mode === 'write' && workDir?.includes('/worktrees/ticket-')) seen.built.add(workDir);
+      if (mode === 'write' && workDir?.includes('/worktrees/task-')) seen.built.add(workDir);
       if (prompt.includes('to judge this implement run') && workDir?.startsWith('/copies/t1-1/') && !rejectedOnce) return (rejectedOnce = true), run('RETRYABLE: no test for a blank status');
-      if (prompt.includes('on the branches below')) return run('agent/ticket-1: APPROVE');
+      if (prompt.includes('on the branches below')) return run('agent/task-1: APPROVE');
       if (prompt.includes('on the change below')) return run('APPROVE');
       if (prompt.startsWith('Use the improve skill')) return improve.push(input), run('## Test blank values\n');
       return run('PASS');

@@ -1,7 +1,7 @@
 ---
-id: TICKET-2
+id: TASK-2
 status: blocked
-blocked_by: TICKET-1
+blocked_by: TASK-1
 ---
 
 # Airline overview dashboard

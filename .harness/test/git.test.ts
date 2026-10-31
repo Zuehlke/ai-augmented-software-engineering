@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { MockActivityEnvironment } from '@temporalio/testing';
-import { addWorktree, changesSince, mergeBranch, removeWorktree, requireCommitted } from '../src/activities/repo';
+import { addWorktree, changesSince, mergeBranch, removeWorktree, requireCommitted } from '../src/activities/git';
 import type { Changes } from '../src/types/pipeline';
 
 // The git activities on a real repository: two loops' branches, the way the implement loops leave them
@@ -19,12 +19,12 @@ function repo(): string {
   writeFileSync(path.join(dir, '.gitignore'), '.harness/worktrees/\n');
   git('add', '.');
   git('commit', '-qm', 'Start');
-  for (const [ticket, file, text] of [['ticket-5', 'b.txt', 'five'], ['ticket-6', 'c.txt', 'six'], ['ticket-7', 'b.txt', 'seven']]) {
-    const worktree = path.join(dir, '.harness/worktrees', ticket);
-    git('worktree', 'add', '-q', '-b', `agent/${ticket}`, worktree, 'main');
+  for (const [task, file, text] of [['task-5', 'b.txt', 'five'], ['task-6', 'c.txt', 'six'], ['task-7', 'b.txt', 'seven']]) {
+    const worktree = path.join(dir, '.harness/worktrees', task);
+    git('worktree', 'add', '-q', '-b', `agent/${task}`, worktree, 'main');
     writeFileSync(path.join(worktree, file), `${text}\n`);
     execFileSync('git', ['add', '.'], { cwd: worktree });
-    execFileSync('git', ['commit', '-qm', `Build ${ticket}`], { cwd: worktree });
+    execFileSync('git', ['commit', '-qm', `Build ${task}`], { cwd: worktree });
   }
   return dir;
 }
@@ -34,24 +34,24 @@ const run = (dir: string, ...args: string[]) => execFileSync('git', args, { cwd:
 test('the pipeline rebases the branches one after the other, without merge commits, and leaves out a conflict', async () => {
   const dir = repo();
   const env = new MockActivityEnvironment();
-  assert.equal(await env.run(mergeBranch, dir, 'agent/ticket-5', 'main'), null);
-  assert.equal(await env.run(mergeBranch, dir, 'agent/ticket-6', 'main'), null);
-  assert.equal(await env.run(mergeBranch, dir, 'agent/ticket-7', 'main'), 'it conflicts with main'); // b.txt, like ticket-5
-  assert.equal(run(dir, 'log', '--format=%s'), 'Build ticket-6\nBuild ticket-5\nStart');
+  assert.equal(await env.run(mergeBranch, dir, 'agent/task-5', 'main'), null);
+  assert.equal(await env.run(mergeBranch, dir, 'agent/task-6', 'main'), null);
+  assert.equal(await env.run(mergeBranch, dir, 'agent/task-7', 'main'), 'it conflicts with main'); // b.txt, like task-5
+  assert.equal(run(dir, 'log', '--format=%s'), 'Build task-6\nBuild task-5\nStart');
   assert.equal(run(dir, 'rev-list', '--merges', 'HEAD'), '');
   assert.equal(run(dir, 'status', '--porcelain'), '');
-  assert.equal(run(path.join(dir, '.harness/worktrees/ticket-7'), 'status', '--porcelain'), '');
-  assert.equal(await env.run(mergeBranch, dir, 'agent/ticket-6', 'main'), null); // a retry finds it already in
+  assert.equal(run(path.join(dir, '.harness/worktrees/task-7'), 'status', '--porcelain'), '');
+  assert.equal(await env.run(mergeBranch, dir, 'agent/task-6', 'main'), null); // a retry finds it already in
 });
 
 test('it only merges into the branch you started on, and not over your uncommitted changes', async () => {
   const dir = repo();
   const env = new MockActivityEnvironment();
   writeFileSync(path.join(dir, 'a.txt'), 'yours, not committed\n');
-  assert.match(String(await env.run(mergeBranch, dir, 'agent/ticket-5', 'main')), /uncommitted changes on main/);
+  assert.match(String(await env.run(mergeBranch, dir, 'agent/task-5', 'main')), /uncommitted changes on main/);
   run(dir, 'checkout', '-q', 'a.txt');
   run(dir, 'checkout', '-qb', 'other');
-  assert.match(String(await env.run(mergeBranch, dir, 'agent/ticket-5', 'main')), /you're on other, but it merges into main/);
+  assert.match(String(await env.run(mergeBranch, dir, 'agent/task-5', 'main')), /you're on other, but it merges into main/);
   assert.equal(run(dir, 'log', '--format=%s', 'main'), 'Start');
 });
 
@@ -62,26 +62,26 @@ test('the loops all add to learnings.md, and both their lines get in', async () 
   writeFileSync(path.join(dir, '.harness/learnings.md'), '# Learnings\n');
   run(dir, 'add', '.');
   run(dir, 'commit', '-qm', 'Learnings');
-  for (const ticket of ['ticket-8', 'ticket-9']) {
-    const worktree = path.join(dir, '.harness/worktrees', ticket);
-    run(dir, 'worktree', 'add', '-q', '-b', `agent/${ticket}`, worktree, 'main');
-    appendFileSync(path.join(worktree, '.harness/learnings.md'), `- learned in ${ticket}\n`);
-    run(worktree, 'commit', '-qam', `Learn in ${ticket}`);
+  for (const task of ['task-8', 'task-9']) {
+    const worktree = path.join(dir, '.harness/worktrees', task);
+    run(dir, 'worktree', 'add', '-q', '-b', `agent/${task}`, worktree, 'main');
+    appendFileSync(path.join(worktree, '.harness/learnings.md'), `- learned in ${task}\n`);
+    run(worktree, 'commit', '-qam', `Learn in ${task}`);
   }
   const env = new MockActivityEnvironment();
-  assert.equal(await env.run(mergeBranch, dir, 'agent/ticket-8', 'main'), null);
-  assert.equal(await env.run(mergeBranch, dir, 'agent/ticket-9', 'main'), null);
-  assert.equal(run(dir, 'show', 'HEAD:.harness/learnings.md'), '# Learnings\n- learned in ticket-8\n- learned in ticket-9');
+  assert.equal(await env.run(mergeBranch, dir, 'agent/task-8', 'main'), null);
+  assert.equal(await env.run(mergeBranch, dir, 'agent/task-9', 'main'), null);
+  assert.equal(run(dir, 'show', 'HEAD:.harness/learnings.md'), '# Learnings\n- learned in task-8\n- learned in task-9');
 });
 
 test('once its branch is in, the worktree and the branch go, and a retry does nothing', async () => {
   const dir = repo();
   const env = new MockActivityEnvironment();
-  assert.equal(await env.run(mergeBranch, dir, 'agent/ticket-5', 'main'), null);
-  await env.run(removeWorktree, dir, 'ticket-5', 'agent/ticket-5');
-  assert.equal(existsSync(path.join(dir, '.harness/worktrees/ticket-5')), false);
-  assert.equal(run(dir, 'branch', '--list', 'agent/ticket-5'), '');
-  await env.run(removeWorktree, dir, 'ticket-5', 'agent/ticket-5');
+  assert.equal(await env.run(mergeBranch, dir, 'agent/task-5', 'main'), null);
+  await env.run(removeWorktree, dir, 'task-5', 'agent/task-5');
+  assert.equal(existsSync(path.join(dir, '.harness/worktrees/task-5')), false);
+  assert.equal(run(dir, 'branch', '--list', 'agent/task-5'), '');
+  await env.run(removeWorktree, dir, 'task-5', 'agent/task-5');
 });
 
 test('a fresh loop doesn’t take over a branch an earlier run left, a loop on its own goes on with it', async () => {
@@ -89,19 +89,19 @@ test('a fresh loop doesn’t take over a branch an earlier run left, a loop on i
   const head = run(dir, 'rev-parse', 'HEAD');
   const env = new MockActivityEnvironment();
   // A retry of the activity: the branch is there, but nothing happened on it yet
-  const fresh = await env.run(addWorktree, dir, 'ticket-8', 'agent/ticket-8', head, true);
-  assert.equal(await env.run(addWorktree, dir, 'ticket-8', 'agent/ticket-8', head, true), fresh);
-  // agent/ticket-5 has a commit from an earlier run
-  await assert.rejects(env.run(addWorktree, dir, 'ticket-5', 'agent/ticket-5', head, true), /agent\/ticket-5 is left over from an earlier run/);
+  const fresh = await env.run(addWorktree, dir, 'task-8', 'agent/task-8', head, true);
+  assert.equal(await env.run(addWorktree, dir, 'task-8', 'agent/task-8', head, true), fresh);
+  // agent/task-5 has a commit from an earlier run
+  await assert.rejects(env.run(addWorktree, dir, 'task-5', 'agent/task-5', head, true), /agent\/task-5 is left over from an earlier run/);
   // `flows ralph` goes on with it, also once its worktree is gone
-  run(dir, 'worktree', 'remove', '--force', '.harness/worktrees/ticket-5');
-  const goesOn: string = await env.run(addWorktree, dir, 'ticket-5', 'agent/ticket-5', head);
-  assert.equal(run(goesOn, 'log', '-1', '--format=%s'), 'Build ticket-5');
+  run(dir, 'worktree', 'remove', '--force', '.harness/worktrees/task-5');
+  const goesOn: string = await env.run(addWorktree, dir, 'task-5', 'agent/task-5', head);
+  assert.equal(run(goesOn, 'log', '-1', '--format=%s'), 'Build task-5');
 });
 
 test('what changed since a commit: the commits, and what is left uncommitted', async () => {
   const dir = repo();
-  const worktree = path.join(dir, '.harness/worktrees/ticket-5');
+  const worktree = path.join(dir, '.harness/worktrees/task-5');
   const before = run(worktree, 'rev-parse', 'HEAD');
   const env = new MockActivityEnvironment();
   assert.deepEqual(await env.run(changesSince, worktree, before), { files: [], uncommitted: [], commits: '' });

@@ -8,7 +8,7 @@ import { answers } from './fakes';
 import type { AgentInput } from '../src/types/agent';
 import type { RalphResult } from '../src/types/pipeline';
 import { answerSignal, ralphStatus } from '../src/workflows/signals';
-import { findVerdict, parseVerdict } from '../src/workflows/text';
+import { findVerdict, parseVerdict } from '../src/workflows/support/text';
 
 // The ralph workflow with fake activities: no agent, no git, no tests, just the loop's logic
 
@@ -34,21 +34,21 @@ async function createWorker(fakes: Partial<typeof activities>): Promise<Worker> 
       changesSince: async () => ({ files: ['src/Flights.java'], uncommitted: [], commits: 'commit' }), // the agent committed a step
       resetTo: async () => {},
       runTests: async () => ({ pass: true, tail: '' }),
-      ticketDone: async () => false,
+      taskDone: async () => false,
       progressLeft: async () => false,
       ...fakes,
     },
   });
 }
 
-// Whether the ticket is done
+// Whether the task is done
 async function runRalph(fakes: Partial<typeof activities>, maxRuns?: number): Promise<boolean> {
   const worker = await createWorker(fakes);
   const result: RalphResult = await worker.runUntil(
     env.client.workflow.execute('ralph', {
       taskQueue: 'test',
       workflowId: `ralph-test-${Math.random()}`,
-      args: [{ repoDir: '/repo', agent: 'claude', ticket: 'TICKET-1', maxRuns }],
+      args: [{ repoDir: '/repo', agent: 'claude', task: 'TASK-1', maxRuns }],
     }),
   );
   return result.done;
@@ -67,7 +67,7 @@ test('a rejected step becomes the feedback for the next run', async () => {
       done = true;
       return 'Looks good.\nPASS';
     }),
-    ticketDone: async () => done,
+    taskDone: async () => done,
   });
 
   assert.equal(result, true);
@@ -116,24 +116,24 @@ test('a question waits for your answer, which goes to the next run. An answer se
       done = true;
       return 'PASS';
     }),
-    ticketDone: async () => done,
+    taskDone: async () => done,
   });
   const result: RalphResult = await worker.runUntil(async () => {
     const handle = await env.client.workflow.start('ralph', {
       taskQueue: 'test',
       workflowId: `ralph-test-${Math.random()}`,
-      args: [{ repoDir: '/repo', agent: 'claude', ticket: 'TICKET-1' }],
+      args: [{ repoDir: '/repo', agent: 'claude', task: 'TASK-1' }],
     });
     await handle.signal(answerSignal, 'an answer to nothing');
     while ((await handle.query(ralphStatus)).question === undefined) {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
-    await handle.signal(answerSignal, 'yes, until TICKET-4');
+    await handle.signal(answerSignal, 'yes, until TASK-4');
     return handle.result();
   });
 
   assert.equal(result.done, true);
-  assert.deepEqual(feedback, [null, 'The judge asked: keep the old table?\nA human answered: yes, until TICKET-4', null]);
+  assert.deepEqual(feedback, [null, 'The judge asked: keep the old table?\nA human answered: yes, until TASK-4', null]);
 });
 
 test('the verdict is the last line that starts with one', () => {
@@ -143,10 +143,10 @@ test('the verdict is the last line that starts with one', () => {
 });
 
 test('the review agent’s verdict per branch is its last line about that branch', () => {
-  const review = 'agent/ticket-5: APPROVE, I thought at first\n...\nagent/ticket-5: REJECT, no test for the filter\nagent/ticket-15: APPROVE';
-  assert.deepEqual(findVerdict(review, ['APPROVE', 'REJECT'], 'agent/ticket-5'), { kind: 'REJECT', reason: 'no test for the filter' });
-  assert.equal(findVerdict(review, ['APPROVE', 'REJECT'], 'agent/ticket-15')?.kind, 'APPROVE');
-  assert.equal(findVerdict(review, ['APPROVE', 'REJECT'], 'agent/ticket-1'), undefined); // ticket-15 isn't ticket-1
+  const review = 'agent/task-5: APPROVE, I thought at first\n...\nagent/task-5: REJECT, no test for the filter\nagent/task-15: APPROVE';
+  assert.deepEqual(findVerdict(review, ['APPROVE', 'REJECT'], 'agent/task-5'), { kind: 'REJECT', reason: 'no test for the filter' });
+  assert.equal(findVerdict(review, ['APPROVE', 'REJECT'], 'agent/task-15')?.kind, 'APPROVE');
+  assert.equal(findVerdict(review, ['APPROVE', 'REJECT'], 'agent/task-1'), undefined); // task-15 isn't task-1
 });
 
 test('the loop works in a worktree of its own, with the implement skill, checked with the judge skill', async () => {
@@ -154,22 +154,22 @@ test('the loop works in a worktree of its own, with the implement skill, checked
   const checked: string[] = [];
   const added: unknown[][] = [];
   await runRalph({
-    addWorktree: async (...args: unknown[]) => (added.push(args), '/repo/.harness/worktrees/ticket-1'),
+    addWorktree: async (...args: unknown[]) => (added.push(args), '/repo/.harness/worktrees/task-1'),
     requireCommitted: async (repo: string, file: string) => void checked.push(`${repo} ${file}`),
     runAgent: answers(async (input: AgentInput) => (runs.push(input), input.mode === 'write' ? 'did a step' : 'PASS')),
-    ticketDone: async () => runs.length > 0,
+    taskDone: async () => runs.length > 0,
   });
-  // On its own, it starts from your branch, or goes on with agent/ticket-1: not fresh
-  assert.deepEqual(added, [['/repo', 'ticket-1', 'agent/ticket-1', 'abc123', false]]);
+  // On its own, it starts from your branch, or goes on with agent/task-1: not fresh
+  assert.deepEqual(added, [['/repo', 'task-1', 'agent/task-1', 'abc123', false]]);
   assert.ok(runs.length > 0);
-  assert.ok(runs.every((run) => run.repoDir === '/repo' && run.workDir === '/repo/.harness/worktrees/ticket-1'));
-  assert.match(runs[0].prompt, /^Use the implement skill in `\.agents\/skills\/implement\/SKILL\.md`[\s\S]*Your ticket: TICKET-1$/);
+  assert.ok(runs.every((run) => run.repoDir === '/repo' && run.workDir === '/repo/.harness/worktrees/task-1'));
+  assert.match(runs[0].prompt, /^Use the implement skill in `\.agents\/skills\/implement\/SKILL\.md`[\s\S]*Your task: TASK-1$/);
   assert.match(runs[1].prompt, /^Use the judge skill in `\.agents\/skills\/judge\/SKILL\.md` to judge this implement run, with the checks in `\.agents\/skills\/judge\/checks\/implement\.md`/);
   // The worktree only has what's committed, so the skills have to be
   assert.deepEqual(checked, ['/repo .agents/skills/implement/SKILL.md', '/repo .agents/skills/judge/SKILL.md', '/repo .agents/skills/judge/checks/implement.md', '/repo .agents/skills/change-quality/SKILL.md']);
 });
 
-test('a done ticket that still has its progress.md is rejected without asking the judge', async () => {
+test('a done task that still has its progress.md is rejected without asking the judge', async () => {
   const feedback: (string | null)[] = [];
   let judged = 0;
   let writes = 0;
@@ -180,7 +180,7 @@ test('a done ticket that still has its progress.md is rejected without asking th
       judged++;
       return 'PASS';
     }),
-    ticketDone: async () => writes > 0, // the first run finishes it
+    taskDone: async () => writes > 0, // the first run finishes it
     progressLeft: async () => writes < 2, // the second run deletes it
   }, 5);
   assert.equal(result, true);
@@ -189,9 +189,9 @@ test('a done ticket that still has its progress.md is rejected without asking th
   assert.match(feedback[1] ?? '', /progress\.md is still there/);
 });
 
-test('a ticket that is already done needs no run', async () => {
+test('a task that is already done needs no run', async () => {
   let runs = 0;
-  const result = await runRalph({ runAgent: answers(async () => (runs++, 'PASS')), ticketDone: async () => true });
+  const result = await runRalph({ runAgent: answers(async () => (runs++, 'PASS')), taskDone: async () => true });
   assert.equal(result, true);
   assert.equal(runs, 0);
 });
@@ -230,7 +230,7 @@ test('a step that changes what judges it is thrown away', async () => {
       2,
     ),
   );
-  assert.deepEqual(resets, ['/repo/.harness/worktrees/ticket-1@abc123', '/repo/.harness/worktrees/ticket-1@abc123']);
+  assert.deepEqual(resets, ['/repo/.harness/worktrees/task-1@abc123', '/repo/.harness/worktrees/task-1@abc123']);
   assert.match(feedback[1] ?? '', /you changed \.agents\/skills\/judge\/SKILL\.md, which you must not change/);
 });
 
@@ -246,13 +246,13 @@ test('unattended, the judge’s question goes back to the agent, and nobody is a
       done = true;
       return 'PASS';
     }),
-    ticketDone: async () => done,
+    taskDone: async () => done,
   });
   const result: RalphResult = await worker.runUntil(
     env.client.workflow.execute('ralph', {
       taskQueue: 'test',
       workflowId: `ralph-test-${Math.random()}`,
-      args: [{ repoDir: '/repo', agent: 'claude', ticket: 'TICKET-1', unattended: true }],
+      args: [{ repoDir: '/repo', agent: 'claude', task: 'TASK-1', unattended: true }],
     }),
   );
   assert.equal(result.done, true);

@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { Client } from '@temporalio/client';
-import { TASK_QUEUE } from '../shared';
+import { TASK_QUEUE } from '../config';
 import { repoDir } from './common';
 
 // Stops every running workflow, removes the agents' worktrees, and deletes their branches once they're merged.
