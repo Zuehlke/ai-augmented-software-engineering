@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>flows watch</title>
+<!-- The page of `flows watch`: what it shows is drawn by page.js from /api/state, styled by page.css -->
+<link rel="stylesheet" href="page.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <div role="tablist" class="tabs">
+      <button type="button" role="tab" class="tab" data-tab="pipeline">Pipeline</button>
+      <button type="button" role="tab" class="tab" data-tab="evals" id="evalsTab" hidden>Evals</button>
+    </div>
+    <div class="right">
+      <span id="branch"></span>
+      <span data-cmd="task flows:start" data-note="Starts Temporal and the worker in the background"><span class="dot" id="temporalDot"></span><span id="temporalText">Temporal</span></span>
+      <span data-cmd="flows logs" data-note="The worker runs the workflows. Its output, the agents' too"><span class="dot" id="workerDot"></span><span id="workerText">Worker</span></span>
+      <span class="segmented" role="group" aria-label="Agent for what you start next"><span>Agent</span><span class="options"><button type="button" data-agent="claude">Claude</button><button type="button" data-agent="copilot">Copilot</button></span></span>
+    </div>
+  </header>
+  <main>
+    <div class="needs" id="needs" aria-live="polite"></div>
+    <section id="pipelineView" role="tabpanel">
+      <div class="scroll"><div class="map" id="map"></div></div>
+      <div class="cost" id="cost"></div>
+      <div class="lower">
+        <div class="lbl">Loops<small>one per task</small></div><div class="loops" id="loops"></div>
+        <div class="lbl">Output<small>flows logs</small></div><div class="log" id="log" tabindex="0" data-cmd="flows logs" data-note="The worker's output, the agents' included"></div>
+      </div>
+    </section>
+    <section id="evalsView" role="tabpanel" hidden></section>
+  </main>
+</div>
+<dialog id="dialog"></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<script src="page.js"></script>
+</body>
+</html>
