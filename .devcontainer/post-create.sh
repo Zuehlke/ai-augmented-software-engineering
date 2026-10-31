@@ -17,8 +17,8 @@ step "Installing the agent CLIs" npm install -g @anthropic-ai/claude-code @githu
 # Runs the tests once, so Maven caches everything `mvn test` needs, also inside the network-blocked sandbox.
 step "Caching the Maven dependencies" mvn -q -B package
 
-# --- Only needed from Lab 9 (Durable workflows) on -------------------------------------------
-step "Installing Temporal and flows (Lab 9+)" bash .devcontainer/install-temporal.sh
+# --- Only needed from Lab 8 (Durable workflows) on -------------------------------------------
+step "Installing Temporal and flows (Lab 8+)" bash .devcontainer/install-temporal.sh
 
 if [ ${#failed[@]} -gt 0 ]; then
   echo >&2
