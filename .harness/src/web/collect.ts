@@ -1,20 +1,22 @@
-// Reads what `flows watch` shows: the workflows from Temporal, the tickets from backlog/, the worker's log
+// Reads what `flows watch` shows: the workflows from Temporal, the tasks from backlog/, the worker's log
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, statSync, openSync, readSync, closeSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { ApplicationFailure, Client, QueryDefinition, WorkflowFailedError } from '@temporalio/client';
 import { temporal } from '@temporalio/proto';
-import { readBacklog } from '../backlog';
-import type { Usage } from '../shared';
-import { branchOf, TASK_QUEUE } from '../shared';
+import { readBacklog } from '../lib/backlog';
+import type { Usage } from '../config';
+import { branchOf, TASK_QUEUE } from '../config';
 import type { PipelineStatus, RalphResult } from '../types/pipeline';
-import type { EvalsProgress, Loop, Other, Pipeline, RunningEvals, Snapshot, State } from './model';
-import { readHistory, readSkillHistory } from '../results';
+import type { EvalsProgress, Loop, Other, Pipeline, RunningEvals, Snapshot, State } from './view-model';
+import { readHistory, readSkillHistory } from '../lib/results';
 import { evalsStatus, pipelineStatus, ralphStatus, skillLoadedEvalsStatus, statusQuery } from '../workflows/signals';
 
 const STATE = path.join(os.homedir(), '.flows');
-export const LOG = process.env.FLOWS_LOG ?? path.join(STATE, 'worker.log');
+const LOG = process.env.FLOWS_LOG ?? path.join(STATE, 'worker.log');
+// How much of the worker's output `flows watch` shows: its last lines
+const LOG_LINES = 300;
 
 // Whether the pid file names a running process with `what` in its command line. The pid files
 // survive a container restart, where the same pid can belong to another process.
@@ -66,7 +68,7 @@ async function result(client: Client, e: Execution): Promise<{ value?: unknown; 
 
 function stateOf(status: string, value?: unknown): State {
   if (status === 'RUNNING') return 'running';
-  // A Ralph loop says whether its ticket is done
+  // A Ralph loop says whether its task is done
   if (status === 'COMPLETED') return (value as RalphResult | undefined)?.done === false ? 'stopped' : 'done';
   if (status === 'TERMINATED' || status === 'CANCELED' || status === 'CANCELLED') return 'stopped';
   return 'failed';
@@ -146,7 +148,7 @@ async function pipelineOf(client: Client, e: Execution): Promise<Pipeline> {
 }
 
 async function loopOf(client: Client, e: Execution, prefix: string): Promise<Loop> {
-  const loop: Loop = { workflowId: e.workflowId, ticket: e.workflowId.slice(prefix.length), state: 'running' };
+  const loop: Loop = { workflowId: e.workflowId, task: e.workflowId.slice(prefix.length), state: 'running' };
   if (e.status === 'RUNNING') {
     const { status, trouble } = await runningWorkflow(client, e, ralphStatus);
     loop.run = status?.run;
@@ -162,7 +164,7 @@ async function loopOf(client: Client, e: Execution, prefix: string): Promise<Loo
 }
 
 // The running evals, and where each of its working runs is: its pipeline, evals-<id>-<task>-<run>, and that
-// pipeline's Ralph loops, evals-<id>-<task>-<run>-TICKET-<n>
+// pipeline's Ralph loops, evals-<id>-<task>-<run>-TASK-<n>
 async function evalsOf(client: Client, e: Execution, latest: Map<string, Execution>): Promise<RunningEvals> {
   const { status } = await runningWorkflow(client, e, evalsStatus);
   const working = (status?.runs ?? []).filter((r) => r.state === 'running' || r.state === 'grading');
@@ -177,7 +179,7 @@ async function evalsOf(client: Client, e: Execution, latest: Map<string, Executi
       progress.loops = await Promise.all(
         loops.map(async (l) => {
           const loop = await loopOf(client, l, `${id}-`);
-          return { ticket: loop.ticket, state: loop.state, run: loop.run, judging: loop.judging, costUsd: loop.costUsd };
+          return { task: loop.task, state: loop.state, run: loop.run, judging: loop.judging, costUsd: loop.costUsd };
         }),
       );
       return progress;
@@ -187,7 +189,7 @@ async function evalsOf(client: Client, e: Execution, latest: Map<string, Executi
 }
 
 // The last lines of the worker's log, without reading all of it, and without the colour codes in Temporal's lines
-export function tailLog(lines: number, file = LOG): string[] {
+function tailLog(lines: number, file = LOG): string[] {
   if (!existsSync(file)) return [];
   const size = statSync(file).size;
   const length = Math.min(size, 512 * 1024);
@@ -203,7 +205,7 @@ export function tailLog(lines: number, file = LOG): string[] {
 
 export async function collect(client: Client | undefined, repoDir: string): Promise<Snapshot> {
   const snapshot: Snapshot = {
-    temporal: false, worker: false, loops: [], others: [], backlog: readBacklog(repoDir), log: tailLog(1000),
+    temporal: false, worker: false, loops: [], others: [], backlog: readBacklog(repoDir), log: tailLog(LOG_LINES),
     evalReports: readHistory(repoDir), skillReports: readSkillHistory(repoDir),
     withoutEvals: !existsSync(path.join(repoDir, '.harness/evals')),
   };
@@ -253,7 +255,7 @@ export async function collect(client: Client | undefined, repoDir: string): Prom
   }
   await Promise.all(jobs);
   for (const loop of snapshot.loops) {
-    if (loop.state === 'done') loop.merged = merged(repoDir, branchOf(loop.ticket));
+    if (loop.state === 'done') loop.merged = merged(repoDir, branchOf(loop.task));
   }
   return snapshot;
 }

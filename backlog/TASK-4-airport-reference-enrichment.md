@@ -1,7 +1,7 @@
 ---
-id: TICKET-4
+id: TASK-4
 status: blocked
-blocked_by: TICKET-3
+blocked_by: TASK-3
 blocked_reason: an airport reference dataset (city, timezone per IATA code) that the data team has not yet delivered, with no ETA
 ---
 

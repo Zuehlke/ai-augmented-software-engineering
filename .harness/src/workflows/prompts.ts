@@ -8,6 +8,46 @@ export const skillFile = (name: string) => `.agents/skills/${name}/SKILL.md`;
 // The judge's checks for one phase. The judge reads only these, not the checks of the other phases.
 export const judgeChecksFile = (phase: PhaseName) => `.agents/skills/judge/checks/${phase}.md`;
 
+// What the research agent and its judge get: the feature request, and your feedback when you sent the
+// specification back
+export function researchInput(request: string, feedback?: string): string {
+  const input = `Feature request: ${request}`;
+  if (!feedback) return `${input}
+
+Write the specification in a new folder, specs/<slug>/specification.md, with a slug no folder in specs/ has yet.`;
+  return `${input}
+
+Feedback from a human on the specification you wrote for it in specs/. Revise that specification.md and keep
+what the feedback doesn't touch.
+
+${feedback}`;
+}
+
+// What the design agent and its judge get: the specification, and your feedback when you sent the plan back
+export function designInput(spec: string, feedback?: string): string {
+  const input = `Specification: ${spec}`;
+  if (!feedback) return input;
+  return `${input}
+
+Feedback from a human on the plan, the design and its tasks. Revise the design.md next to the specification
+and keep what the feedback doesn't touch. Where the feedback is about how the work is cut into tasks, write
+it down in the design too, for the plan agent.
+
+${feedback}`;
+}
+
+// What the plan agent and its judge get: the specification with its design, and your feedback when you sent the
+// plan back
+export function planInput(spec: string, feedback?: string): string {
+  const input = `Specification: ${spec}, with its design.md next to it`;
+  if (!feedback) return input;
+  return `${input}
+
+A human sent the earlier tasks back with this feedback, and they were removed. Cut the tasks again:
+
+${feedback}`;
+}
+
 // An agent that does the work, unattended
 export function workPrompt(skill: PhaseName, input: string): string {
   return `Use the ${skill} skill in \`${skillFile(skill)}\` for the input below.

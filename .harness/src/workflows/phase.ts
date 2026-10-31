@@ -1,13 +1,12 @@
 import { ApplicationFailure, condition, log, setHandler } from '@temporalio/workflow';
-import type { Agent } from '../shared';
-import { HARNESS_CODE, MODELS } from '../shared';
+import type { Agent } from '../config';
+import { HARNESS_CODE, MAX_FAILURES, MODELS } from '../config';
 import type { Changes, Phase, PhaseStatus, Verdict } from '../types/pipeline';
-import { MAX_FAILURES } from '../types/pipeline';
-import { changesSince, headCommit, requireCommitted, resetTo, runAgent, setFeedback } from './activities';
+import { changesSince, headCommit, requireCommitted, resetTo, runAgent, setFeedback } from './support/activities';
 import { judgeChecksFile, judgePrompt, skillFile, workPrompt } from './prompts';
 import { answerSignal } from './signals';
-import { parseVerdict } from './text';
-import { count, rejected } from './usage';
+import { parseVerdict } from './support/text';
+import { count, rejected } from './support/usage';
 
 // The agent does the work in workDir, a worktree, one run after the other, with the skill named like the
 // phase. A separate judge checks each run, with the judge skill. The agent mustn't change the skills.
@@ -107,7 +106,7 @@ async function judge(repoDir: string, workDir: string, agent: Agent, phase: Phas
 const PROTECTED = ['.agents/', '.harness/sandbox/', ...HARNESS_CODE, 'Taskfile.yml'];
 
 // The judge's rules: what's broken about the run, or null
-export function brokenRule({ files, uncommitted }: Changes): string | null {
+function brokenRule({ files, uncommitted }: Changes): string | null {
   if (!files.length) return "you didn't commit anything. Commit your work.";
   if (uncommitted.length) return `you left changes you didn't commit: ${uncommitted.join(', ')}. Commit them or remove them.`;
   return null;

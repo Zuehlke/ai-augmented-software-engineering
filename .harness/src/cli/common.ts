@@ -2,9 +2,9 @@
 import { execFileSync } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { Client, WorkflowClient, WorkflowExecutionAlreadyStartedError, WorkflowFailedError, WorkflowHandle } from '@temporalio/client';
-import type { Agent } from '../shared';
-import { TASK_QUEUE } from '../shared';
-import { failureMessage } from '../workflows/failure';
+import type { Agent } from '../config';
+import { TASK_QUEUE } from '../config';
+import { failureMessage } from '../workflows/support/failure';
 import { statusQuery } from '../workflows/signals';
 
 export const address = process.env.TEMPORAL_ADDRESS ?? 'localhost:7233';
@@ -29,6 +29,15 @@ export async function ask(question: string): Promise<boolean> {
   process.stdout.write(`${question} [y/N] `);
   const answer = await answers.next();
   return !answer.done && answer.value.trim() === 'y';
+}
+
+// Asks for a line of text, for example your feedback. Empty when you just press Enter.
+export async function askText(question: string): Promise<string> {
+  reader ??= createInterface({ input: process.stdin });
+  answers ??= reader[Symbol.asyncIterator]();
+  process.stdout.write(`${question} `);
+  const answer = await answers.next();
+  return answer.done ? '' : answer.value.trim();
 }
 
 // No more questions: the reader goes, so Ctrl+C stops the command again instead of going to the reader

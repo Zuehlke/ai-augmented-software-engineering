@@ -1,13 +1,18 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { ApplicationFailure } from '@temporalio/common';
-import { TestWorkflowEnvironment } from '@temporalio/testing';
+import { MockActivityEnvironment, TestWorkflowEnvironment } from '@temporalio/testing';
 import { DefaultLogger, Runtime, Worker } from '@temporalio/worker';
 import type * as activities from '../src/activities';
 import { answers } from './fakes';
 import type { AgentInput } from '../src/types/agent';
-import type { SkillLoadedEvalCase, SkillLoadedEvalReport, SkillLoadedEvalsStatus } from '../src/types/skill-loaded-evals';
+import type { SkillLoadedEvalCase, SkillLoadedEvalReport, SkillLoadedEvalsStatus, SkillSetup } from '../src/types/skill-loaded-evals';
 import { skillLoadedEvalsStatus } from '../src/workflows/signals';
+import { describeSkillSetup } from '../src/activities/evals';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 // The skillLoadedEvals workflow with fake activities: no agent, no files, just the logic
 
@@ -84,6 +89,11 @@ test('a case passes when most of its three runs do what it expects, for failing 
   assert.match(inputs[0].prompt, /^Use the improve skill .* on the skill-loaded evals that just ran: its results are in `\.harness\/evals\/results\/20261016-174500\/`/);
   assert.equal(report.proposals, '## Narrow the testing description');
   assert.deepEqual(finalStatus && { step: finalStatus.step, done: finalStatus.done, runs: finalStatus.runs }, { step: 'writing proposals', done: 6, runs: 6 });
+  // Every case with its runs, for flows watch to fill in as they finish
+  assert.deepEqual(finalStatus?.cases?.map((c) => [c.prompt, c.runs.filter((run) => run?.loaded).length, c.runs.filter((run) => run?.loaded === false).length]), [
+    ['add an endpoint', 2, 1],
+    ['fix a typo', 2, 1],
+  ]);
 
   // The report: what it checked, what the runs cost, with which model. Written once the runs are done, again with the proposals.
   assert.equal(report.evalsId, '20261016-174500');
@@ -135,4 +145,26 @@ test('a run that fails counts as not doing what the case expects, and the others
   assert.equal(endpoint.pass, true);
   assert.equal(report.costUsd?.toFixed(2), '0.05'); // the failed run reported no cost, it doesn't make the sum unknown
   assert.deepEqual(written.length, 1);
+});
+
+test('what the skill-loaded evals checks: the commit, the skills changed but not committed, and their descriptions as they are', async () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'skills-'));
+  const git = (...args: string[]) => execFileSync('git', args, { cwd: dir, stdio: 'ignore' });
+  const skill = (name: string, description: string) => {
+    mkdirSync(path.join(dir, '.agents/skills', name), { recursive: true });
+    writeFileSync(path.join(dir, '.agents/skills', name, 'SKILL.md'), `---\nname: ${name}\ndescription: ${description}\n---\n\n## TASK\n\ndescription: not this one\n`);
+    writeFileSync(path.join(dir, '.agents/skills', name, 'skill-loaded-evals.json'), '[{ "prompt": "Add an endpoint.", "loads": true }]');
+  };
+  git('init', '-q', '-b', 'main');
+  git('config', 'user.email', 'test@example.com');
+  git('config', 'user.name', 'Test');
+  skill('testing', 'Test-first Java coverage.');
+  skill('api-design', '"API design for endpoints."');
+  git('add', '.');
+  git('commit', '-qm', 'Skills');
+  skill('testing', 'Use for every task in this repository.');
+
+  const setup = (await new MockActivityEnvironment().run(describeSkillSetup, dir)) as SkillSetup;
+  assert.deepEqual(setup.uncommitted, ['.agents/skills/testing/SKILL.md']);
+  assert.deepEqual(setup.descriptions, { 'api-design': 'API design for endpoints.', testing: 'Use for every task in this repository.' });
 });
