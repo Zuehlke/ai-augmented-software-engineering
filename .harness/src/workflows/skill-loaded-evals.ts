@@ -1,11 +1,11 @@
 import { isCancellation, setHandler } from '@temporalio/workflow';
 import type { SkillLoadedEvalInput, SkillLoadedEvalReport, SkillLoadedEvalResult, SkillLoadedEvalRun, SkillLoadedEvalsStatus } from '../types/skill-loaded-evals';
 import { asExpected } from '../types/skill-loaded-evals';
-import { describeSkillSetup, listSkillLoadedEvalCases, loadsSkill, writeSkillReport } from './activities';
-import { failureMessage } from './failure';
+import { describeSkillSetup, listSkillLoadedEvalCases, loadsSkill, writeSkillReport } from './support/activities';
+import { failureMessage } from './support/failure';
 import { propose } from './improve';
 import { skillLoadedEvalsStatus } from './signals';
-import { addCost } from './usage';
+import { addCost } from './support/usage';
 
 // Runs every case three times, because agent output varies from run to run. A case passes when
 // most runs do what it expects. All runs start at once. Writes the report to .harness/evals/results/.
@@ -13,13 +13,17 @@ export async function skillLoadedEvals({ repoDir, agent, evalsId }: SkillLoadedE
   const startedAt = new Date().toISOString(); // the workflow's clock: the same on every replay
   // The cases from every .agents/skills/<skill>/skill-loaded-evals.json
   const cases = await listSkillLoadedEvalCases(repoDir);
-  const status: SkillLoadedEvalsStatus = { evalsId, step: 'running', runs: cases.length * 3, done: 0, asExpected: 0 };
+  const status: SkillLoadedEvalsStatus = {
+    evalsId, step: 'running', runs: cases.length * 3, done: 0, asExpected: 0,
+    cases: cases.map((c) => ({ ...c, runs: [null, null, null] })),
+  };
   setHandler(skillLoadedEvalsStatus, () => status);
   const setup = await describeSkillSetup(repoDir);
   let model: string | undefined;
 
   // One run of a case. A run that keeps failing is a run that didn't do what the case expects, the others still count.
-  const once = async (skill: string, prompt: string, loads: boolean): Promise<SkillLoadedEvalRun> => {
+  const once = async (index: number, n: number): Promise<SkillLoadedEvalRun> => {
+    const { skill, prompt, loads } = cases[index];
     let run: SkillLoadedEvalRun;
     try {
       const load = await loadsSkill(repoDir, skill, prompt);
@@ -32,12 +36,13 @@ export async function skillLoadedEvals({ repoDir, agent, evalsId }: SkillLoadedE
     }
     status.done++;
     if (asExpected(run, loads)) status.asExpected++;
+    status.cases![index].runs[n] = run;
     return run;
   };
 
   const results: SkillLoadedEvalResult[] = await Promise.all(
-    cases.map(async ({ skill, prompt, loads }) => {
-      const runs = await Promise.all([1, 2, 3].map(() => once(skill, prompt, loads)));
+    cases.map(async ({ skill, prompt, loads }, index) => {
+      const runs = await Promise.all([0, 1, 2].map((n) => once(index, n)));
       const loaded = runs.filter((run) => run.loaded).length;
       const expected = runs.filter((run) => asExpected(run, loads)).length;
       return { skill, prompt, loads, runs, loaded, pass: expected >= 2 };

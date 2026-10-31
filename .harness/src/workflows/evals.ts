@@ -1,16 +1,16 @@
 import { CancellationScope, executeChild, isCancellation, setHandler } from '@temporalio/workflow';
-import type { Agent, Usage } from '../shared';
-import { MODELS } from '../shared';
+import type { Agent, Usage } from '../config';
+import { MODELS } from '../config';
 import type { PipelineStatus } from '../types/pipeline';
 import type { EvalsInput, EvalsReport, EvalsRun, EvalsStatus, EvalsTask, Setup } from '../types/evals';
-import { acceptRun, describeSetup, gradeInput, prepareRun, removeCopy, requireCommitted, runAgent, writeReport, writeRun } from './activities';
-import { failureMessage } from './failure';
+import { acceptRun, describeSetup, gradeInput, prepareRun, removeCopy, requireCommitted, runAgent, writeReport, writeRun } from './support/activities';
+import { failureMessage } from './support/failure';
 import { propose } from './improve';
 import { pipeline } from './pipeline';
 import { gradePrompt, skillFile } from './prompts';
 import { evalsStatus } from './signals';
-import { branchVerdicts, findVerdict } from './text';
-import { add, count, usageOf, usageOnly } from './usage';
+import { branchVerdicts, findVerdict } from './support/text';
+import { add, count, usageOf, usageOnly } from './support/usage';
 
 // The evals grades the setup as it is: every task runs `runs` times through the unattended pipeline, each
 // run in a copy of its own, and is graded: the task's hidden acceptance tests, then a grader with the
@@ -129,7 +129,7 @@ async function grade({ repoDir, dir, base, agent, task, result, usage }: Graded)
 function reviewed(review: string): string {
   const verdicts = branchVerdicts(review);
   if (verdicts.length) return `the review approved no branch: ${verdicts.join('; ')}`;
-  return review ? "the review gave no verdict line per branch, like 'agent/ticket-1: APPROVE'" : 'the review approved no branch';
+  return review ? "the review gave no verdict line per branch, like 'agent/task-1: APPROVE'" : 'the review approved no branch';
 }
 
 // Runs the jobs, at most `size` at the same time, in order

@@ -2,7 +2,7 @@
   "name": "flows",
   "version": "1.0.0",
   "private": true,
-  "description": "The unattended agent workflows of Labs 9-13 (backlog tour, Ralph loop, orchestration pipeline, evals) on Temporal",
+  "description": "The unattended agent workflows of Labs 8-13 (the pipeline, Ralph loop, orchestration, evals) on Temporal",
   "bin": {
     "flows": "bin/flows"
   },

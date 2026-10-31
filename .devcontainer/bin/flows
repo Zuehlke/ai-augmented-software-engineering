@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# The `flows` command (Lab 9+), linked to /usr/local/bin/flows by install-temporal.sh. Installs the
+# The `flows` command (Lab 8+), linked to /usr/local/bin/flows by install-temporal.sh. Installs the
 # dependencies of the harness in .harness/ when they're missing or package-lock.json changed, then runs it.
 set -euo pipefail
 workspace="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)"
 dir="$workspace/.harness"
 # Only node_modules/ may be left after switching to an earlier lab, so it looks for package.json
-[ -f "$dir/package.json" ] || { echo "flows: this branch has no flows harness in .harness/ yet, it comes with Lab 9" >&2; exit 1; }
+[ -f "$dir/package.json" ] || { echo "flows: this branch has no flows harness in .harness/ yet, it comes with Lab 8" >&2; exit 1; }
 
 # A copy of the lockfile marks a complete install, so an interrupted `npm ci` is retried
 stamp="$dir/node_modules/.installed-package-lock.json"

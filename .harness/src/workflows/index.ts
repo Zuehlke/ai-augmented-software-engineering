@@ -1,4 +1,5 @@
 // Every workflow the worker runs
+export * from './design';
 export * from './plan';
 export * from './ralph';
 export * from './pipeline';

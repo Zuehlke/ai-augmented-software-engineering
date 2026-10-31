@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
-import { noteWorkerVersion, staleWorker } from '../src/version';
+import { noteWorkerVersion, staleWorker } from '../src/lib/worker-version';
 
 // A repository with .harness/src, and a state folder for the worker's note
 function repo() {

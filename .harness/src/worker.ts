@@ -1,7 +1,7 @@
 import { DefaultLogger, NativeConnection, Runtime, Worker } from '@temporalio/worker';
 import * as activities from './activities';
-import { TASK_QUEUE } from './shared';
-import { noteWorkerVersion } from './version';
+import { TASK_QUEUE } from './config';
+import { noteWorkerVersion } from './lib/worker-version';
 
 // The worker runs the workflows and activities. Stop it (Ctrl+C) and start it again at any time:
 // the workflows continue where they were, Temporal keeps their state.

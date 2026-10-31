@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Context } from '@temporalio/activity';
 import { ApplicationFailure } from '@temporalio/common';
+import { AGENT_MODELS } from '../config';
 import type { AgentInput, AgentRun } from '../types/agent';
 import type { SkillLoad } from '../types/skill-loaded-evals';
 import { exec, git, label } from './exec';
@@ -18,9 +19,7 @@ export async function runAgent({ repoDir, workDir = repoDir, agent, mode, model,
   }
 
   const sandbox = await readFile(path.join(repoDir, '.harness/sandbox/no-network.json'), 'utf8');
-  // claude takes the family as an alias. Copilot takes its own ids, and has no Haiku: that role gets Sonnet.
-  const copilotModels = { opus: 'claude-opus-5', sonnet: 'claude-sonnet-5', haiku: 'claude-sonnet-5' };
-  const modelArgs = model ? ['--model', agent === 'copilot' ? copilotModels[model] : model] : [];
+  const modelArgs = model ? ['--model', AGENT_MODELS[agent][model]] : [];
   const stream = ['--output-format', 'stream-json', '--verbose'];
   const commands: Record<string, [string, string[]]> = {
     'claude-write': ['claude', ['-p', prompt, ...modelArgs, ...stream, '--dangerously-skip-permissions', '--settings', sandbox]],
