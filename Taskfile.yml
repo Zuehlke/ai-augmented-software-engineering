@@ -43,8 +43,7 @@ tasks:
     silent: true
 
   flows:watch:
-    desc: "Show what runs and what waits for you, in the terminal (Lab 9+, after task flows:start)"
-    interactive: true
+    desc: "Show what runs and what waits for you, in your browser on http://localhost:8234 (Lab 9+, after task flows:start)"
     cmds:
       - flows watch
 
