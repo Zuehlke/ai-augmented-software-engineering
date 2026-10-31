@@ -1,6 +1,6 @@
 ---
 name: judge
-description: Judge another agent's run on a phase (research, plan or implement) like a stranger's work, and end with one verdict line.
+description: Judge another agent's run on a phase (research, design, plan or implement) like a stranger's work, and end with one verdict line.
 disable-model-invocation: true
 ---
 

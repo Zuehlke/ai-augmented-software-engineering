@@ -1,38 +1,12 @@
-import { existsSync } from 'node:fs';
-import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { existsSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 import { ApplicationFailure } from '@temporalio/common';
-import { isDone, readBacklog, startable, waiting } from '../backlog';
-import { rebaseAndFastForward } from '../rebase';
-import type { Changes, TestResult } from '../types/pipeline';
-import type { SkillLoadedEvalCase } from '../types/skill-loaded-evals';
+import { rebaseAndFastForward } from '../lib/git';
+import type { Changes } from '../types/pipeline';
 import { exec, git } from './exec';
 
+// Activities on git: the worktrees the agents work in, what they changed, and bringing a branch into yours.
 // Every activity has to be safe to run twice: Temporal retries it when it fails or its worker dies.
-
-// What a run leaves for the next one, not part of the work: .harness/run/, ignored by git
-async function runFile(repoDir: string, name: string): Promise<string> {
-  const dir = path.join(repoDir, '.harness/run');
-  await mkdir(dir, { recursive: true });
-  return path.join(dir, name);
-}
-
-// Writes .harness/run/feedback.md for the next agent run, or removes it (feedback = null)
-export async function setFeedback(repoDir: string, feedback: string | null): Promise<void> {
-  const file = await runFile(repoDir, 'feedback.md');
-  if (feedback === null) {
-    await rm(file, { force: true });
-  } else {
-    await writeFile(file, feedback + '\n');
-  }
-}
-
-// The whole output goes to .harness/run/test-output.txt, the judge only gets its end
-export async function runTests(repoDir: string): Promise<TestResult> {
-  const { code, output } = await exec(repoDir, 'task', ['test'], { quiet: true });
-  await writeFile(await runFile(repoDir, 'test-output.txt'), output);
-  return { pass: code === 0, tail: output.slice(-3_000) };
-}
 
 export async function headCommit(repoDir: string): Promise<string> {
   return (await git(repoDir, 'rev-parse', 'HEAD')).trim();
@@ -67,44 +41,6 @@ export async function changesSince(workDir: string, before: string): Promise<Cha
   };
 }
 
-// The ids of all tickets in backlog/, in order: TICKET-1, TICKET-2, ...
-export async function listTickets(repoDir: string): Promise<string[]> {
-  return readBacklog(repoDir).map((ticket) => ticket.id);
-}
-
-// True when the ticket's file in backlog/ says `status: done`. Fails for good if there is no such ticket.
-export async function ticketDone(repoDir: string, ticket: string): Promise<boolean> {
-  const found = readBacklog(repoDir).find((t) => t.id === ticket);
-  if (!found) {
-    throw ApplicationFailure.nonRetryable(`There is no ${ticket} in backlog/.`);
-  }
-  return found.status === 'done';
-}
-
-// The ids of the tickets in backlog/ that can start: marked `status: ready`, or blocked only by tickets
-// that are done by now
-export async function readyTickets(repoDir: string): Promise<string[]> {
-  return startable(readBacklog(repoDir)).map((ticket) => ticket.id);
-}
-
-// The tickets in backlog/ that wait, and for what: `TICKET-6: <why>`. Only the ones blocked by one of
-// `tickets`, the tickets a pipeline worked on, not what's left from earlier work.
-export async function blockedTickets(repoDir: string, tickets: string[]): Promise<string[]> {
-  const backlog = readBacklog(repoDir);
-  return waiting(backlog)
-    .filter((ticket) => ticket.blockedBy.some((id) => tickets.includes(id)))
-    .map((ticket) => {
-      const notDone = ticket.blockedBy.filter((id) => !isDone(backlog, id)).map((id) => `${id} isn't done`);
-      const why = [...notDone, ticket.blockedReason].filter(Boolean).join(', ');
-      return `${ticket.id}: still blocked, ${why}`;
-    });
-}
-
-// True while .harness/progress.md is there: the loop's memory, which it deletes when the ticket is done
-export async function progressLeft(workDir: string): Promise<boolean> {
-  return existsSync(path.join(workDir, '.harness/progress.md'));
-}
-
 // Creates .harness/worktrees/<name> with the branch checked out, a new branch from `commit`. If the branch is
 // already there, it goes on with it (`flows ralph` after `--runs 1`). With `fresh`, it only does that when
 // nothing happened on the branch yet, the case of a retry. Else it fails for good: a branch left over from an
@@ -119,7 +55,10 @@ export async function addWorktree(repoDir: string, name: string, branch: string,
       `${branch} is left over from an earlier run. Merge it, or delete it: git worktree remove --force .harness/worktrees/${name}; git branch -D ${branch}`,
     );
   }
-  if (!(await git(repoDir, 'worktree', 'list', '--porcelain')).includes(`worktree ${dir}\n`)) {
+  // git lists a worktree by its real path: on macOS, for example, /var is a link to /private/var
+  const listed = await git(repoDir, 'worktree', 'list', '--porcelain');
+  const real = existsSync(dir) ? realpathSync(dir) : dir;
+  if (!listed.includes(`worktree ${dir}\n`) && !listed.includes(`worktree ${real}\n`)) {
     await git(repoDir, 'worktree', 'add', ...(tip ? [dir, branch] : ['-b', branch, dir, commit]));
   }
   return dir;
@@ -164,7 +103,7 @@ export async function checkoutProblem(repoDir: string, into: string): Promise<st
   return null;
 }
 
-// Brings a branch into `into`, rebased and fast-forwarded, see rebase.ts. Returns null when it's in, else why not.
+// Brings a branch into `into`, rebased and fast-forwarded, see lib/git.ts. Returns null when it's in, else why not.
 export async function mergeBranch(repoDir: string, branch: string, into: string): Promise<string | null> {
   const problem = await checkoutProblem(repoDir, into);
   if (problem) return problem;
@@ -172,17 +111,4 @@ export async function mergeBranch(repoDir: string, branch: string, into: string)
   if (result === 'conflict') return `it conflicts with ${into}`;
   if (result === 'not fast-forward') return `${into} couldn't be fast-forwarded to it`;
   return null;
-}
-
-// The cases of every skill that has a skill-loaded-evals.json, each with the name of its skill
-export async function listSkillLoadedEvalCases(repoDir: string): Promise<SkillLoadedEvalCase[]> {
-  const skillsDir = path.join(repoDir, '.agents/skills');
-  const cases: SkillLoadedEvalCase[] = [];
-  for (const skill of (await readdir(skillsDir)).sort()) {
-    const file = path.join(skillsDir, skill, 'skill-loaded-evals.json');
-    if (!existsSync(file)) continue;
-    const skillCases: { prompt: string; loads: boolean }[] = JSON.parse(await readFile(file, 'utf8'));
-    cases.push(...skillCases.map(({ prompt, loads }) => ({ skill, prompt, loads })));
-  }
-  return cases;
 }

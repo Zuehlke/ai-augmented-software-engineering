@@ -1,8 +1,8 @@
 import { isCancellation } from '@temporalio/workflow';
-import type { Agent } from '../shared';
-import { MODELS } from '../shared';
-import { runAgent } from './activities';
-import { failureMessage } from './failure';
+import type { Agent } from '../config';
+import { MODELS } from '../config';
+import { runAgent } from './support/activities';
+import { failureMessage } from './support/failure';
 import { improvePrompt } from './prompts';
 
 // The improve agent reads the evals' results, and the earlier ones, and proposes changes to the skills and the

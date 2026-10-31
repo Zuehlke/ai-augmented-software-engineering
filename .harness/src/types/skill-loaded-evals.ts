@@ -1,5 +1,5 @@
 // The skill-loaded evals: does the agent load each skill when it should?
-import type { Agent } from '../shared';
+import type { Agent } from '../config';
 
 export interface SkillLoadedEvalInput {
   repoDir: string;
@@ -40,6 +40,7 @@ export interface SkillSetup {
   commit: string;
   skillsCommit: string; // the last commit that changed .agents/skills
   uncommitted: string[]; // the files in .agents/skills with changes not committed
+  descriptions?: Record<string, string>; // each skill's description, as it was checked: the agent loads a skill by it
 }
 
 // A whole run of the skill-loaded evals, as it stores it in .harness/evals/results/<evalsId>/skill-loaded-evals.json
@@ -60,6 +61,7 @@ export interface SkillLoadedEvalsStatus {
   done: number;
   asExpected: number; // the runs done that did what their case expects
   costUsd?: number | null;
+  cases?: (SkillLoadedEvalCase & { runs: (SkillLoadedEvalRun | null)[] })[]; // every case, its runs so far: null while one runs
 }
 
 // Whether a run did what its case expects. A failed run didn't.

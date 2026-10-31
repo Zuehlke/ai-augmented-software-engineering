@@ -1,6 +1,6 @@
 // Any running workflow: what it's doing, and your answer to its judge's question
 import { Client } from '@temporalio/client';
-import { dollars } from '../shared';
+import { dollars } from '../config';
 import { answerSignal, statusQuery } from '../workflows/signals';
 import { link } from './common';
 
