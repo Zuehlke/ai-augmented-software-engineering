@@ -48,7 +48,7 @@
       ]
     }
   },
-  "forwardPorts": [8080, 8233],
+  "forwardPorts": [8080, 8233, 8234],
   "portsAttributes": {
     "8080": {
       "label": "Flight API",
@@ -58,6 +58,11 @@
     "8233": {
       "label": "Temporal UI",
       "onAutoForward": "notify"
+    },
+    // Lab 9+: what runs and what waits for you, `task flows:watch`
+    "8234": {
+      "label": "flows watch",
+      "onAutoForward": "openBrowser"
     }
   },
   // Runs first, before the slow postCreateCommand, so the token hook is in ~/.bashrc before the first terminal opens.
