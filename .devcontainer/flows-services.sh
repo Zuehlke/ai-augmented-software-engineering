@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Only needed from Lab 9 (Durable workflows) on: keeps Temporal and the flows worker running in the
+# Only needed from Lab 8 (Durable workflows) on: keeps Temporal and the flows worker running in the
 # background, so you don't need a terminal for each. `flows watch` shows what they do, `flows logs`
 # the worker's output. On branches without the flows harness (.harness/package.json), it starts nothing.
 #
