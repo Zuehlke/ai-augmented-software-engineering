@@ -1,7 +1,7 @@
 # Progress
 
-## Ticket
-<ticket id> <ticket title>, or without a ticket: the title of specs/<slug>/specification.md
+## Task
+<task id> <task title>, or without a task: the title of specs/<slug>/specification.md
 
 ## Done
 - <acceptance criterion that is met>: <what you built for it>, covered by <test name>
