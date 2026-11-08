@@ -48,7 +48,7 @@
       ]
     }
   },
-  "forwardPorts": [8080, 8233, 8234],
+  "forwardPorts": [8080, 8233, 8234, 15500],
   "portsAttributes": {
     "8080": {
       "label": "Flight API",
@@ -63,6 +63,11 @@
     "8234": {
       "label": "flows watch",
       "onAutoForward": "openBrowser"
+    },
+    // Lab 13: the evals that ran, `task evals:view`
+    "15500": {
+      "label": "promptfoo",
+      "onAutoForward": "notify"
     }
   },
   // Runs first, before the slow postCreateCommand, so the token hook is in ~/.bashrc before the first terminal opens.
