@@ -62,7 +62,7 @@
     // Lab 8+: what runs and what waits for you, `task flows:watch`
     "8234": {
       "label": "flows watch",
-      "onAutoForward": "openBrowser"
+      "onAutoForward": "notify"
     },
     // Lab 13: the evals that ran, `task evals:view`
     "15500": {
