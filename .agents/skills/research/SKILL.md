@@ -21,8 +21,7 @@ You MUST NOT make any code changes or offer to make any code changes as part of 
 
 2. Detect and list gaps or ambiguities (missing acceptance criteria, unclear ownership, implicit assumptions, vague terms, hidden dependencies, sequencing conflicts).
 
-3. Ask the user at most the 5 highest-impact clarifying questions (only those that block correct implementation or carry high risk). Skip trivial questions.
-   - If something is uncertain but non-critical, make and state a sensible assumption instead of asking.
+3. Ask the user at most the 5 highest-impact clarifying questions (only those that block correct implementation or carry high risk)
 
 4. Draft improved, implementation-ready requirements:
    - Title: the outcome, from the user's perspective
