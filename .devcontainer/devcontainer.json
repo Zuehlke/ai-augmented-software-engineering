@@ -62,7 +62,7 @@
     // Lab 8+: what runs and what waits for you, `task flows:watch`
     "8234": {
       "label": "flows watch",
-      "onAutoForward": "openBrowser"
+      "onAutoForward": "notify"
     }
   },
   // Runs first, before the slow postCreateCommand, so the token hook is in ~/.bashrc before the first terminal opens.
