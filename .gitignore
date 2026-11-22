@@ -37,3 +37,6 @@ build/
 
 ### Agent tokens ###
 .devcontainer/.env
+
+### Node ###
+node_modules/
