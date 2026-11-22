@@ -44,3 +44,6 @@ build/
 ### Evals results ###
 # What flows evals measured, per evals: local to your checkout, not committed
 .harness/evals/results/
+
+### Node ###
+node_modules/
